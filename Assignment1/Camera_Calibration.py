@@ -10,11 +10,8 @@
 # cv.imshow('image', img)
 # cv2.waitKey(0)
 
-
 import cv2
 import numpy as np
-
-
 
 
 def task1():
@@ -38,7 +35,7 @@ def task1():
     img = cv2.imread(fname) #source image
     
     cv2.namedWindow('image', 0)
-    cv2.resizeWindow('image', 248, 351)
+    cv2.resizeWindow('image', 800, 600)
     cv2.imshow("image", img)
     cv2.waitKey(0)
     cv2.imwrite('cb2_test1.png', img)
@@ -61,11 +58,41 @@ def task1():
         imgpoints.append(corners2)
         # 在棋盘上绘制角点
         img = cv2.drawChessboardCorners(img,(7,7),corners2,ret)
+        cv2.imshow("ChessboardCorners", img)
+        cv2.waitKey(0)
         # 保存图像
         cv2.imwrite("cb2_test2.png", img)
         # filepath = '/data/workspace/myshixun/task1/'
         # cv2.imwrite(filepath + 'out/img.png', img)
 
+    # Calibration
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+
+    # Undistortion
+    img = cv2.imread('Assignment1\cb2.png')
+    h,  w = img.shape[:2]
+    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), 1, (w,h))
+
+    # undistort
+    dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+    # crop the image
+    x, y, w, h = roi
+    dst = dst[y:y+h, x:x+w]
+    print(type(dst))
+    print(dst)
+    cv2.imshow("undistorted result", dst)
+    cv2.waitKey(0)
+    cv2.imwrite('cb2_result.jpg', dst)
+    # does not work for cb5
+
+
+    # Re-projection Error
+    mean_error = 0
+    for i in range(len(objpoints)):
+        imgpoints2, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
+        error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+        mean_error += error
+    print( "total error: {}".format(mean_error/len(objpoints)) )    
 
 
 if __name__== "__main__" :
