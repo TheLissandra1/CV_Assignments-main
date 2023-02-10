@@ -60,20 +60,23 @@ def task1():
         
         imgpoints.append(corners2)
         print(imgpoints)
-        # 在棋盘上绘制角点
+        # Detect the calibration pattern in image:
         img = cv2.drawChessboardCorners(img,(a,b),corners2,ret)
         cv2.namedWindow('ChessboardCorners', 0)
         cv2.resizeWindow('ChessboardCorners', 1000, 1000)
         cv2.imshow("ChessboardCorners", img)
         cv2.waitKey(0)
-        # 保存图像
+        # save image with corners
         cv2.imwrite("Assignment1\Checkerboards\C1_Corners.png", img)
-        # filepath = '/data/workspace/myshixun/task1/'
-        # cv2.imwrite(filepath + 'out/img.png', img)
 
     # Calibration
+    # to estimate the intrinsic and extrinsic parameters of the camera.
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 
+
+
+
+    # Validate the calibration
     # Undistortion
     img = cv2.imread('Assignment1\Checkerboards\C1.png')
     h,  w = img.shape[:2]
