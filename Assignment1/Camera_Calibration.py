@@ -12,13 +12,19 @@
 
 import cv2
 import numpy as np
+import glob
+import os, sys
+import re
 
 
 def task1():
     print("hello world")
-    fname = "Assignment1\Checkerboards\C1.png"
-    # criteria:角点精准化迭代过程的终止条件
+    # fname = "Assignment1\Checkerboards\C1.png"
+    # termination criteria:
+    # 30 = loops
+    # 0.001 ?
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+    # size of checkerboard: a*b
     a = 9
     b = 6
     objp = np.zeros((a*b,3), np.float32)
@@ -33,47 +39,73 @@ def task1():
     objpoints = [] # 3d point in real world space
     imgpoints = [] # 2d points in image plane.
 
-    # 识别出角点,记录世界物体坐标和图像坐标
-    img = cv2.imread(fname) #source image
-    
-    cv2.namedWindow('image', 0)
-    cv2.resizeWindow('image', 1000, 1000)
-    cv2.imshow("image", img)
-    cv2.waitKey(0)
-    # cv2.imwrite('Assignment1\Undistortions\C1_Result', img)
-    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY) #转灰度
-    # 寻找角点,存入corners,ret是找到角点的flag
-    ########## Begin ##########
-    ret,corners = cv2.findChessboardCorners(gray,(a,b),None)
+    # all image file names with .png suffix
+    path = "Assignment1\Checkerboards\*.png"
+    image_fnames = glob.iglob(path)
+    # print(image_fnames)
 
-    ########## End ##########
-    print(type(ret))
-    print(ret)
-    if ret == True:
-        objpoints.append(objp)
-        print(objpoints)
-        # 执行亚像素级角点检测
-        ########## Begin ##########
-        corners2 = cv2.cornerSubPix(gray, corners, (11,11), (-1,-1), criteria)
-        
-        ########## End ##########
-        
-        imgpoints.append(corners2)
-        print(imgpoints)
-        # Detect the calibration pattern in image:
-        img = cv2.drawChessboardCorners(img,(a,b),corners2,ret)
-        cv2.namedWindow('ChessboardCorners', 0)
-        cv2.resizeWindow('ChessboardCorners', 1000, 1000)
-        cv2.imshow("ChessboardCorners", img)
+    # iterate all training images
+    for i_fname in image_fnames:
+        print(i_fname)
+        # read source image
+        img = cv2.imread(i_fname)
+    
+        # view img
+        cv2.namedWindow('image', 0)
+        cv2.resizeWindow('image', 1000, 1000)
+        cv2.imshow("image", img)
         cv2.waitKey(0)
-        # save image with corners
-        cv2.imwrite("Assignment1\Checkerboards\C1_Corners.png", img)
+        gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY) 
+        # find corners and 
+        # ret: flag of corners, boolean type
+        ret,corners = cv2.findChessboardCorners(gray,(a,b),None)
+        print(ret)
+
+        if ret == True:
+            objpoints.append(objp)
+
+            # execute sub-pixel corner detection
+            corners2 = cv2.cornerSubPix(gray, corners, (11,11), (-1,-1), criteria)
+            
+            imgpoints.append(corners2)
+
+            # Draw and display the corners
+            img = cv2.drawChessboardCorners(img,(a,b),corners2,ret)
+            cv2.namedWindow('ChessboardCorners', 0)
+            cv2.resizeWindow('ChessboardCorners', 1000, 1000)
+            cv2.imshow("ChessboardCorners", img)
+            cv2.waitKey(0)
+            # save image with corners
+            if i_fname.endswith('.png'):  
+                new_fname = i_fname.replace('Checkerboards', "Result")
+                print(new_fname)
+                new_fname = new_fname.replace('.png','_Corners.png')
+                print(new_fname)
+            cv2.imwrite(new_fname, img)
 
     # Calibration
     # to estimate the intrinsic and extrinsic parameters of the camera.
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+    # return camera matrix, distortion coefficients, rotation and translation vectors etc.
+    print("camera matrix:", mtx)
+    print("distortion", dist)
+
+    # ############## Save camera parameters
+    np.savez("Assignment1\CameraData\camera_Data.npz", mtx=mtx, dist=dist,rvecs=rvecs,tvecs=tvecs )
+
+    # # load the camera matrix and distortion coefficients from the previous calibration result.
+    # npzfile = np.load("camera_Data.npz")
+    # sorted(npzfile.files)
 
 
+
+
+
+
+
+
+
+    
 
 
     # Validate the calibration
@@ -87,8 +119,8 @@ def task1():
     # crop the image
     # x, y, w, h = roi
     # dst = dst[y:y+h, x:x+w]
-    print(type(dst))
-    print(dst)
+    # print(type(dst))
+    # print(dst)
     cv2.namedWindow('undistorted result', 0)
     cv2.resizeWindow('undistorted result', 1000, 1000)
     cv2.imshow("undistorted result", dst)
@@ -104,6 +136,7 @@ def task1():
         error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2)/len(imgpoints2)
         mean_error += error
     print( "total error: {}".format(mean_error/len(objpoints)) )    
+
 
 
 if __name__== "__main__" :
