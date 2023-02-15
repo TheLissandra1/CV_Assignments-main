@@ -41,6 +41,7 @@ class MyWindow(QtWidgets.QMainWindow):
 
          # Create a group box to group buttons together
         button_group_box = QtWidgets.QGroupBox("Actions")
+        
 
         # Create a layout for the group box
         button_group_box_layout = QtWidgets.QHBoxLayout()
@@ -50,12 +51,23 @@ class MyWindow(QtWidgets.QMainWindow):
         # Set the layout for the group box
         button_group_box.setLayout(button_group_box_layout)
 
+        # Create a layout for image show
+        label_group_box = QtWidgets.QGroupBox("Images")
+        
+
+        # Create a layout for the label_group_box
+        label_group_box_layout = QtWidgets.QHBoxLayout()
+        # Add labels to the layout
+        label_group_box_layout.addWidget(self.image_label)
+        label_group_box_layout.addWidget(self.result_label)
+        label_group_box.setLayout(label_group_box_layout)
+
+
         # Create a layout for the main window
         main_layout = QtWidgets.QVBoxLayout()
         # Add widgets to the main layout
         main_layout.addWidget(button_group_box)
-        main_layout.addWidget(self.image_label)
-        main_layout.addWidget(self.result_label)
+        main_layout.addWidget(label_group_box)
 
         # Set the main layout for the main window
         central_widget = QtWidgets.QWidget()
