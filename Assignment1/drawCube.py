@@ -4,13 +4,7 @@ import glob
 import os, sys
 import re
 
-
-# def draw_line(img, corners, imgpts):
-#     corner = tuple(corners[0].ravel())
-#     img = cv2.line(img, corner, tuple(imgpts[0].ravel()), (255,0,0), 5)
-#     img = cv2.line(img, corner, tuple(imgpts[1].ravel()), (0,255,0), 5)
-#     img = cv2.line(img, corner, tuple(imgpts[2].ravel()), (0,0,255), 5)
-#     return img
+np.set_printoptions(suppress=True)
 
 # draw 3D coordinates axies
 def draw_line(img, corners, imgpts):
@@ -43,6 +37,8 @@ if __name__ == '__main__':
     # Load previously saved data
     with np.load('Assignment1\CameraData\camera_Data.npz') as X:
         mtx, dist, _, _ = [X[i] for i in ('mtx','dist','rvecs','tvecs')]
+    print(type(mtx))
+    print(mtx)
 
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     a = 9
@@ -54,8 +50,8 @@ if __name__ == '__main__':
 
     axis = np.float32([[3, 0, 0], [0, 3, 0], [0, 0, -3]]).reshape(-1, 3)
 
-    axis_cube = np.float32([[0, 0, 0], [0, 3, 0], [3, 3, 0], [3, 0, 0],
-                            [0, 0, -3], [0, 3, -3], [3, 3, -3], [3, 0, -3]])
+    axis_cube = np.float32([[0, 0, 0], [0, 2, 0], [2, 2, 0], [2, 0, 0],
+                            [0, 0, -2], [0, 2, -2], [2, 2, -2], [2, 0, -2]])
 
 
 
@@ -80,18 +76,19 @@ if __name__ == '__main__':
     
             # Cube point
             imgpts_cube, jac_cube = cv2.projectPoints(axis_cube, rvecs, tvecs, mtx, dist)  
-            img_cube = draw_cube(img_cube, corners, imgpts_cube)
-            cv2.namedWindow('image with line', 0)
-            cv2.resizeWindow('image with line', 1000, 1000)
+            # # draw cube to the axis image
+            img_cube = draw_cube(img_line, corners, imgpts_cube)
+            # cv2.namedWindow('image with line', 0)
+            # cv2.resizeWindow('image with line', 1000, 1000)
             cv2.namedWindow('image with cube', 0)
             cv2.resizeWindow('image with cube', 1000, 1000)
-            cv2.imshow('image with line', img_line)  
+            # cv2.imshow('image with line', img_line)  
             cv2.imshow('image with cube', img_cube)
             k = cv2.waitKey(0) & 0xFF
 
-            if fname.endswith('.png'):  
-                line_fname = fname.replace('Checkerboards', "Lines")
-                line_fname = line_fname.replace('.png','_Line.png')
+            # if fname.endswith('.png'):  
+            #     line_fname = fname.replace('Checkerboards', "Lines")
+            #     line_fname = line_fname.replace('.png','_Line.png')
 
             if fname.endswith('.png'):  
                 new_fname = fname.replace('Checkerboards', "Cubes")
@@ -99,7 +96,7 @@ if __name__ == '__main__':
                 new_fname = new_fname.replace('.png','_Cube.png')
                 print(new_fname)
                 
-            cv2.imwrite(line_fname, img_line)
+            # cv2.imwrite(line_fname, img_line)
             cv2.imwrite(new_fname, img_cube)
 
 
