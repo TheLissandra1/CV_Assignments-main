@@ -36,7 +36,10 @@ while cap.isOpened():
     img = frame
     # draw corners in each frame
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) 
-    ret, corners = cv2.findChessboardCorners(gray,(a,b),None)
+    ret, corners = cv2.findChessboardCorners(gray,(a,b), None, 
+                                             cv2.CALIB_CB_ADAPTIVE_THRESH
+                                             + cv2.CALIB_CB_NORMALIZE_IMAGE
+                                             + cv2.CALIB_CB_FAST_CHECK)
     if ret == True:
         objpoints.append(objp)
 
@@ -64,7 +67,7 @@ while cap.isOpened():
         imgpts_cube, jac_cube = cv2.projectPoints(axis_cube, rvecs, tvecs, mtx, dist)  
         img_cube = drawCube.draw_cube(img, corners, imgpts_cube)
 
-        cv2.imshow("Cube", img_cube)
+        cv2.imshow("frame", img_cube)
 
 
     # set press 'q' to quit
