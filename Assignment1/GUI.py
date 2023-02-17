@@ -28,11 +28,11 @@ class MyWindow(QtWidgets.QMainWindow):
         self.height.setText("6")
         text_layout = QFormLayout()
 
-        self.text_edit = QWidget()
-        self.text_edit.setMaximumWidth(300)
+        text_edit = QWidget()
+        text_edit.setMaximumWidth(300)
         text_layout.addRow("Width: ", self.width)
         text_layout.addRow("Height: ", self.height)
-        self.text_edit.setLayout(text_layout)
+        text_edit.setLayout(text_layout)
 
         # Create buttons and labels
         self.load_button = QtWidgets.QPushButton("Load Image")
@@ -66,7 +66,7 @@ class MyWindow(QtWidgets.QMainWindow):
         # Create a layout for the group box
         button_group_box_layout = QtWidgets.QHBoxLayout()
         # Add buttons to the layout
-        button_group_box_layout.addWidget(self.text_edit)
+        button_group_box_layout.addWidget(text_edit)
         button_group_box_layout.addWidget(self.load_button, alignment=QtCore.Qt.AlignTop)
         button_group_box_layout.addWidget(self.draw_button, alignment=QtCore.Qt.AlignTop)
 
