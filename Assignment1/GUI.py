@@ -46,9 +46,9 @@ class MyWindow(QtWidgets.QMainWindow):
         self.draw_button.setEnabled(False)
 
         # QPushButton to draw corners
-        self.all_button = QtWidgets.QPushButton('Run all')
-        self.all_button.clicked.connect(self.draw_corners)
-        self.all_button.setEnabled(False)
+        self.all_button = QtWidgets.QPushButton('Run multiple')
+        self.all_button.clicked.connect(self.run_All)
+        self.all_button.setEnabled(True)
 
         # QLabel to present the loaded image
         self.image_label = QtWidgets.QLabel()
@@ -69,6 +69,7 @@ class MyWindow(QtWidgets.QMainWindow):
         button_group_box_layout.addWidget(text_edit)
         button_group_box_layout.addWidget(self.load_button, alignment=QtCore.Qt.AlignTop)
         button_group_box_layout.addWidget(self.draw_button, alignment=QtCore.Qt.AlignTop)
+        button_group_box_layout.addWidget(self.all_button, alignment=QtCore.Qt.AlignTop)
 
         # Set the layout for the group box
         button_group_box.setLayout(button_group_box_layout)
@@ -94,8 +95,131 @@ class MyWindow(QtWidgets.QMainWindow):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
+    def manually_draw(self, a, b):
+        self.result_label.setText("Corners not found!\n"
+                                  "Please manually select 4 corners of the largest rectangle "
+                                  "in the chessboard\n"
+                                  "\n"
+                                  "Please select corners in z-order (order: 1-2-3-4): \n"
+                                  "\n"
+                                  "            Width\n"
+                                  "    1 ⌈¯¯¯¯¯¯¯¯¯¯¯¯¯¯⌉ 2\n"
+                                  "      |           ⋰  |\n"
+                                  "      |        ⋰     |  Height\n"
+                                  "      |     ⋰        |\n"
+                                  "      |  ⋰           |\n"
+                                  "    3 ⌊______________⌋ 4\n"
+                                  "\n"
+                                  "After selection, press enter to confirm")
+        cv2.namedWindow('manually click', 0)
+        cv2.resizeWindow('manually click', 1000, 1000)
+        cv2.moveWindow('manually click', 10, 10)
+        cv2.imshow("manually click", self.image)
+        self.img_copy = self.image.copy()
+        cv2.setMouseCallback("manually click", self.click_event)
+        while True:
+            key = cv2.waitKey(1)
+            if cv2.getWindowProperty('manually click', cv2.WND_PROP_VISIBLE) < 1:  # window closed
+                break
+            if key == 13:  # press enter
+                break
+        cv2.destroyAllWindows()
+
+        if len(self.coordinates) == 4:
+            flag_draw = True
+            coord = np.asarray(self.coordinates).reshape(4, 1, -1).astype(np.float32)
+
+            # Generate a grid of points on the plane
+            square_size = 50  # in pixels
+            grid_points = []
+            for i in range(b):
+                for j in range(a):
+                    x = j * square_size
+                    y = i * square_size
+                    grid_points.append([x, y])
+            grid_points = np.array(grid_points, dtype=np.float32).reshape(a * b, 1, -1)
+
+            # Find the homography matrix
+            plane_corners = np.array([[0, 0], [(a - 1) * square_size, 0], [0, (b - 1) * square_size],
+                                      [(a - 1) * square_size, (b - 1) * square_size]],
+                                     dtype=np.float32).reshape(4, 1, -1)
+            M = cv2.findHomography(plane_corners, coord)[0]
+            corners = cv2.perspectiveTransform(grid_points, M)
+            self.coordinates.clear()
+        else:
+            corners = 0
+            flag_draw = False
+
+        return corners, flag_draw
+
     def run_All(self):
-        return 0
+        if len(self.width.text()) == 0 or len(self.height.text()) == 0:
+            self.result_label.setText("Please enter the size of the chessboard")
+
+        elif self.width.text().isdigit() and self.height.text().isdigit():
+            options = QtWidgets.QFileDialog.Options()
+            file_names, _ = QFileDialog.getOpenFileNames(self, 'Open Image', '',
+                                                         'Images (*.png *.xpm *.jpg *.bmp *.gif *.pbm *.pgm *.ppm *.xbm *.xpm);;All Files (*)',
+                                                         options=options)
+
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+            # size of checkerboard: a*b
+            a = int(self.width.text())
+            b = int(self.height.text())
+            objp = np.zeros((a * b, 3), np.float32)
+            objp[:, :2] = np.mgrid[0:a, 0:b].T.reshape(-1, 2)
+
+            objpoints = []  # 3d point in real world space
+            imgpoints = []  # 2d points in image plane.
+            flag_draw = False
+
+            # iterate all training images
+            for i_fname in file_names:
+                print(i_fname)
+                # read source image
+                self.image = cv2.imread(i_fname)
+                gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+                self.image = cv2.resize(self.image, [1000, 1000], None, None)
+
+                # find corners and
+                # ret: flag of corners, boolean type
+                ret, corners = cv2.findChessboardCorners(gray, (a, b), None)
+                print(ret)
+
+                if ret:
+                    flag_draw = True
+
+                else:
+                    self.show_image("source")
+                    corners, flag_draw = self.manually_draw(a, b)
+
+                if flag_draw:
+                    corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+                    imgpoints.append(corners2)
+                    objpoints.append(objp)
+                    # Draw and display the corners
+                    img = cv2.drawChessboardCorners(self.image, (a, b), corners2, ret)
+                    self.show_image("source")
+                    # save image with corners
+                    if i_fname.endswith('.png'):
+                        new_fname = i_fname.replace('Checkerboards', "Result")
+                        print(new_fname)
+                        new_fname = new_fname.replace('.png', '_Corners.png')
+                        print(new_fname)
+                    cv2.imwrite(new_fname, self.image)
+
+            # Calibration
+            # to estimate the intrinsic and extrinsic parameters of the camera.
+            # return camera matrix, distortion coefficients, rotation and translation vectors etc.
+            ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+
+            print("camera matrix:", mtx)
+            print("distortion", dist)
+            self.result_label.setText("Camera matrix:\n" + str(mtx))
+            # ############## Save camera parameters
+            np.savez("CameraData\camera_Data.npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+        else:
+            self.result_label.setText("Please enter integer in the size of the chessboard")
 
     def show_image(self, position="result"):
         h, w, channel = self.image.shape
@@ -154,65 +278,12 @@ class MyWindow(QtWidgets.QMainWindow):
             flag_draw = False
 
             gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)  # gray-scale
-
             ret, corners = cv2.findChessboardCorners(gray, (a, b), None)
 
             if ret:
                 flag_draw = True
             else:
-                print("Failed")
-                self.result_label.setText("Corners not found!\n"
-                                          "Please manually select 4 corners of the largest rectangle "
-                                          "in the chessboard\n"
-                                          "\n"
-                                          "Please select corners in z-order (order: 1-2-3-4): \n"
-                                          "\n"
-                                          "            Width\n"
-                                          "    1 ⌈¯¯¯¯¯¯¯¯¯¯¯¯¯¯⌉ 2\n"
-                                          "      |           ⋰  |\n"
-                                          "      |        ⋰     |  Height\n"
-                                          "      |     ⋰        |\n"
-                                          "      |  ⋰           |\n"
-                                          "    3 ⌊______________⌋ 4\n"
-                                          "\n"
-                                          "After selection, press enter to confirm")
-                cv2.namedWindow('manually click', 0)
-                cv2.resizeWindow('manually click', 1000, 1000)
-                cv2.moveWindow('manually click', 10, 10)
-                cv2.imshow("manually click", self.image)
-                self.img_copy = self.image.copy()
-                cv2.setMouseCallback("manually click", self.click_event)
-                while True:
-                    key = cv2.waitKey(1)
-                    if cv2.getWindowProperty('manually click', cv2.WND_PROP_VISIBLE) < 1:  # window closed
-                        break
-                    if key == 13:  # press enter
-                        break
-                cv2.destroyAllWindows()
-
-                if len(self.coordinates) == 4:
-                    flag_draw = True
-                    coord = np.asarray(self.coordinates).reshape(4, 1, -1).astype(np.float32)
-
-                    # Generate a grid of points on the plane
-                    square_size = 50  # in pixels
-                    grid_points = []
-                    for i in range(b):
-                        for j in range(a):
-                            x = j * square_size
-                            y = i * square_size
-                            grid_points.append([x, y])
-                    grid_points = np.array(grid_points, dtype=np.float32).reshape(a * b, 1, -1)
-
-                    # Find the homography matrix
-                    plane_corners = np.array([[0, 0], [(a - 1) * square_size, 0], [0, (b - 1) * square_size],
-                                              [(a - 1) * square_size, (b - 1) * square_size]],
-                                             dtype=np.float32).reshape(4, 1, -1)
-                    M = cv2.findHomography(plane_corners, coord)[0]
-                    corners = cv2.perspectiveTransform(grid_points, M)
-                    self.coordinates.clear()
-                else:
-                    flag_draw = False
+                corners, flag_draw = self.manually_draw(a, b)
 
             if flag_draw:
                 corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
@@ -223,7 +294,7 @@ class MyWindow(QtWidgets.QMainWindow):
 
                 self.show_image("result")
         else:
-            self.result_label.setText("Please enter integer")
+            self.result_label.setText("Please enter integer in the size of the chessboard")
 
 
 if __name__ == '__main__':
