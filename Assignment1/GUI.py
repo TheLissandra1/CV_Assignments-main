@@ -6,6 +6,8 @@ import numpy as np
 
 np.set_printoptions(suppress=True)
 
+
+# User interface to load image, draw corners.
 class MyWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
@@ -19,8 +21,8 @@ class MyWindow(QtWidgets.QMainWindow):
     def initUI(self):
         # set window
         self.setGeometry(0, 0, 1920, 1080)
-        self.setWindowIcon(QIcon("Sprites\Creeper.png"))
 
+        # Enter the size of the chessboard corners
         self.width = QLineEdit(self)
         self.width.setMaximumWidth(50)
         self.width.setText("9")
@@ -45,7 +47,7 @@ class MyWindow(QtWidgets.QMainWindow):
         self.draw_button.clicked.connect(self.draw_corners)
         self.draw_button.setEnabled(False)
 
-        # QPushButton to draw corners
+        # QPushButton to load multiple images and store camera matrix
         self.all_button = QtWidgets.QPushButton('Run multiple')
         self.all_button.clicked.connect(self.run_All)
         self.all_button.setEnabled(True)
@@ -92,7 +94,7 @@ class MyWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(central_widget)
 
     # Manually draw 4 corners of bad images
-    def manually_draw(self, a, b):
+    def manually_draw(self, a, b, gray):
         self.result_label.setText("Corners not found!\n"
                                   "Please manually select 4 corners of the largest rectangle "
                                   "in the chessboard\n"
@@ -124,7 +126,30 @@ class MyWindow(QtWidgets.QMainWindow):
 
         if len(self.coordinates) == 4:
             flag_draw = True
-            coord = np.asarray(self.coordinates).reshape(4, 1, -1).astype(np.float32)
+            # define the size of the region around the selected point
+            region = 60
+
+            coord = []
+            for point in self.coordinates:
+                # create a binary mask with the selected region set to 1
+                mask = np.zeros_like(self.image[:, :, 0])
+                mask[point[1] - region: point[1] + region, point[0] - region:point[0] + region] = 1
+
+                # detect the corner in the region around the selected point
+                accurate_cor = cv2.goodFeaturesToTrack(image=gray, maxCorners=3, qualityLevel=0.01,
+                                                       minDistance=10, mask=mask)
+                # take the one closest to the manually selected corner
+                c = accurate_cor[0]
+                dist = np.linalg.norm(c - point)
+                for a_c in accurate_cor:
+                    temp_dist = np.linalg.norm(a_c - point)
+                    if temp_dist < dist:
+                        c = a_c
+                        dist = temp_dist
+
+                coord.append(c)
+
+            coord = np.asarray(coord).reshape(4, 1, -1).astype(np.float32)
 
             # Generate a grid of points on the plane
             square_size = 50  # in pixels
@@ -148,7 +173,7 @@ class MyWindow(QtWidgets.QMainWindow):
             flag_draw = False
 
         return corners, flag_draw
-    
+
     # run multiple selected images at the same time
     # if ret returns false value, apply manual selection of 4 outer corners and generate inner corners automatically
     def run_All(self):
@@ -189,7 +214,7 @@ class MyWindow(QtWidgets.QMainWindow):
 
                 else:
                     self.show_image("source")
-                    corners, flag_draw = self.manually_draw(a, b)
+                    corners, flag_draw = self.manually_draw(a, b, gray)
 
                 if flag_draw:
                     corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
@@ -215,7 +240,7 @@ class MyWindow(QtWidgets.QMainWindow):
             print("distortion", dist)
             self.result_label.setText("Camera matrix:\n" + str(mtx))
             # Save camera parameters
-            np.savez("Assignment1\CameraData\camera_Data.npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+            np.savez("CameraData\camera_Data.npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
         else:
             self.result_label.setText("Please enter integer in the size of the chessboard")
 
@@ -283,14 +308,14 @@ class MyWindow(QtWidgets.QMainWindow):
             if ret:
                 flag_draw = True
             else:
-                corners, flag_draw = self.manually_draw(a, b)
+                corners, flag_draw = self.manually_draw(a, b, gray)
 
             if flag_draw:
                 corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
                 objpoints.append(objp)
                 imgpoints.append(corners2)
                 # Detect the calibration pattern in image:
-                img_corners = cv2.drawChessboardCorners(self.image, (a, b), corners2, ret)
+                img_corners = cv2.drawChessboardCorners(self.image, (a, b), corners2, True)
 
                 self.show_image("result")
         else:
