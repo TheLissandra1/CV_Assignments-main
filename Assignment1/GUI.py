@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
 import numpy as np
 
+np.set_printoptions(suppress=True)
 
 class MyWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -95,6 +96,7 @@ class MyWindow(QtWidgets.QMainWindow):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
+    # Manually draw 4 corners of bad images
     def manually_draw(self, a, b):
         self.result_label.setText("Corners not found!\n"
                                   "Please manually select 4 corners of the largest rectangle "
@@ -151,7 +153,9 @@ class MyWindow(QtWidgets.QMainWindow):
             flag_draw = False
 
         return corners, flag_draw
-
+    
+    # run multiple selected images at the same time
+    # if ret returns false value, apply manual selection of 4 outer corners and generate inner corners automatically
     def run_All(self):
         if len(self.width.text()) == 0 or len(self.height.text()) == 0:
             self.result_label.setText("Please enter the size of the chessboard")
@@ -181,8 +185,7 @@ class MyWindow(QtWidgets.QMainWindow):
                 gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
                 self.image = cv2.resize(self.image, [1000, 1000], None, None)
 
-                # find corners and
-                # ret: flag of corners, boolean type
+                # find corners and ret: flag of corners, boolean type
                 ret, corners = cv2.findChessboardCorners(gray, (a, b), None)
                 print(ret)
 
@@ -216,8 +219,8 @@ class MyWindow(QtWidgets.QMainWindow):
             print("camera matrix:", mtx)
             print("distortion", dist)
             self.result_label.setText("Camera matrix:\n" + str(mtx))
-            # ############## Save camera parameters
-            np.savez("CameraData\camera_Data.npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+            # Save camera parameters
+            np.savez("Assignment1\CameraData\camera_Data.npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
         else:
             self.result_label.setText("Please enter integer in the size of the chessboard")
 
@@ -232,6 +235,7 @@ class MyWindow(QtWidgets.QMainWindow):
             self.image_label.setPixmap(pixmap)
         self.draw_button.setEnabled(True)
 
+    # draw coordinates when mouse clicks
     def click_event(self, event, x, y, flags, param):
         # check left mouse clicks
         if event == cv2.EVENT_FLAG_LBUTTON:
@@ -248,7 +252,8 @@ class MyWindow(QtWidgets.QMainWindow):
             self.coordinates = []
             self.img_copy = self.image.copy()
             cv2.imshow('manually click', self.img_copy)
-
+            
+    # click function to load an image from device
     def load_image(self):
         options = QtWidgets.QFileDialog.Options()
         file_name, _ = QFileDialog.getOpenFileName(self, 'Open Image', '',
@@ -261,7 +266,7 @@ class MyWindow(QtWidgets.QMainWindow):
             self.image = cv2.resize(self.image, [1000, 1000], None, None)
             self.show_image("source")
 
-    # draw_corners click function, connected to button
+    # click function to draw corners of loaded image
     def draw_corners(self):
         if len(self.width.text()) == 0 or len(self.height.text()) == 0:
             self.result_label.setText("Please enter the size of the chessboard")

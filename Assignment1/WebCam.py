@@ -25,7 +25,6 @@ axis_cube = np.float32([[0, 0, 0], [0, 3, 0], [3, 3, 0], [3, 0, 0],
 
 
 while cap.isOpened():
-    # print('xxx')
     ret, frame = cap.read()
     #  flip
     frame = cv2.flip(frame, 1)
@@ -48,20 +47,12 @@ while cap.isOpened():
         
         imgpoints.append(corners2)
 
-        # Draw and display the corners
-        # img = cv2.drawChessboardCorners(img,(a,b),corners2,ret)
-        # cv2.imshow("ChessboardCorners", img)
-
         # camera calibrations
         ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 
         # draw cubes in each frame
         # Find rotation and translation vectors
         ret, rvecs, tvecs = cv2.solvePnP(objp, corners2, mtx, dist)
-
-        # # Project 3D points to image plane
-        # imgpts, jac = cv2.projectPoints(axis, rvecs, tvecs, mtx, dist)
-        # img_line = drawCube.draw_line(img, corners2, imgpts)
 
         # Cube point
         imgpts_cube, jac_cube = cv2.projectPoints(axis_cube, rvecs, tvecs, mtx, dist)  

@@ -9,7 +9,7 @@ np.set_printoptions(suppress=True)
 # draw 3D coordinates axies
 def draw_line(img, corners, imgpts):
     corner = tuple(corners[0].ravel())
-    ## Attention! data type must be transformed into int32, or OpenCV will report bugs
+    ## Attention: data type must be transformed into int32, or OpenCV will report bugs
     img = cv2.line(img, np.int32(corner), np.int32(tuple(imgpts[0].ravel())), (255, 0, 0), 5)
     img = cv2.line(img, np.int32(corner), np.int32(tuple(imgpts[1].ravel())), (0, 255, 0), 5)
     img = cv2.line(img, np.int32(corner), np.int32(tuple(imgpts[2].ravel())), (0, 0, 255), 5)
@@ -18,7 +18,6 @@ def draw_line(img, corners, imgpts):
 # draw 3D cube
 def draw_cube(img, corners, imgpts):
     imgpts = np.int32(imgpts).reshape(-1,2)
-    # print(imgpts)
     # Bottom face: green
     img = cv2.drawContours(img, [imgpts[:4]], -1, (0, 255, 0), -3)
 
@@ -55,7 +54,7 @@ if __name__ == '__main__':
 
 
 
-    path = "Assignment1\Checkerboards\*.png"
+    path = "Assignment1\Checkerboards\Img10\*.png"
     for fname in glob.iglob(path):
         img = cv2.imread(fname)
         img_cube = cv2.imread(fname)
@@ -78,25 +77,18 @@ if __name__ == '__main__':
             imgpts_cube, jac_cube = cv2.projectPoints(axis_cube, rvecs, tvecs, mtx, dist)  
             # # draw cube to the axis image
             img_cube = draw_cube(img_line, corners, imgpts_cube)
-            # cv2.namedWindow('image with line', 0)
-            # cv2.resizeWindow('image with line', 1000, 1000)
+
             cv2.namedWindow('image with cube', 0)
             cv2.resizeWindow('image with cube', 1000, 1000)
-            # cv2.imshow('image with line', img_line)  
             cv2.imshow('image with cube', img_cube)
             k = cv2.waitKey(0) & 0xFF
-
-            # if fname.endswith('.png'):  
-            #     line_fname = fname.replace('Checkerboards', "Lines")
-            #     line_fname = line_fname.replace('.png','_Line.png')
 
             if fname.endswith('.png'):  
                 new_fname = fname.replace('Checkerboards', "Cubes")
                 print(new_fname)
                 new_fname = new_fname.replace('.png','_Cube.png')
                 print(new_fname)
-                
-            # cv2.imwrite(line_fname, img_line)
+            # save img with cube
             cv2.imwrite(new_fname, img_cube)
 
 
