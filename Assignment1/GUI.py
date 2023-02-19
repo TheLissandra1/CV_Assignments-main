@@ -42,7 +42,6 @@ class MyWindow(QtWidgets.QMainWindow):
 
         # QPushButton to draw corners
         self.draw_button = QtWidgets.QPushButton('Draw Corners')
-        # self.load_button.setGeometry(QtCore.QRect(400, 1600, 100, 23))
         self.draw_button.clicked.connect(self.draw_corners)
         self.draw_button.setEnabled(False)
 
@@ -53,13 +52,9 @@ class MyWindow(QtWidgets.QMainWindow):
 
         # QLabel to present the loaded image
         self.image_label = QtWidgets.QLabel()
-        # self.label.setAlignment(QtCore.Qt.AlignCenter)
-        # self.image_label.setGeometry(QtCore.QRect(20, 20, 400, 400))
 
         # corner result
         self.result_label = QtWidgets.QLabel()
-        # self.result_label.setAlignment(QtCore.Qt.AlignCenter)
-        # self.image_label.setGeometry(QtCore.QRect(520, 520, 400, 400))
 
         # Create a group box to group buttons together
         button_group_box = QtWidgets.QGroupBox("Actions")
@@ -252,7 +247,7 @@ class MyWindow(QtWidgets.QMainWindow):
             self.coordinates = []
             self.img_copy = self.image.copy()
             cv2.imshow('manually click', self.img_copy)
-            
+
     # click function to load an image from device
     def load_image(self):
         options = QtWidgets.QFileDialog.Options()
