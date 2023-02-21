@@ -15,7 +15,7 @@ class MyWindow(QtWidgets.QMainWindow):
         self.image = None
         self.coordinates = []
         self.img_copy = None
-
+        self.corner_check = False
         self.initUI()
 
     def initUI(self):
@@ -25,16 +25,22 @@ class MyWindow(QtWidgets.QMainWindow):
         # Enter the size of the chessboard corners
         self.width = QLineEdit(self)
         self.width.setMaximumWidth(50)
-        self.width.setText("9")
+        self.width.setText("8")
         self.height = QLineEdit(self)
         self.height.setMaximumWidth(50)
         self.height.setText("6")
-        text_layout = QFormLayout()
 
+        # use goodFeaturesToTrack detection result to adjust manually selected corners position
+        self.check = QtWidgets.QCheckBox("Use cv2.goodFeaturesToTrack\nwhen manually selecting corners")
+        self.check.setChecked(False)
+        self.check.stateChanged.connect(self.click_box)
+
+        text_layout = QFormLayout()
         text_edit = QWidget()
-        text_edit.setMaximumWidth(300)
+        text_edit.setMaximumWidth(400)
         text_layout.addRow("Width: ", self.width)
         text_layout.addRow("Height: ", self.height)
+        text_layout.addRow(self.check)
         text_edit.setLayout(text_layout)
 
         # Create buttons and labels
@@ -93,6 +99,12 @@ class MyWindow(QtWidgets.QMainWindow):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
+    def click_box(self, state):
+        if state == QtCore.Qt.Checked:
+            self.corner_check = True
+        else:
+            self.corner_check = False
+
     # Manually draw 4 corners of bad images
     def manually_draw(self, a, b, gray):
         self.result_label.setText("Corners not found!\n"
@@ -126,30 +138,33 @@ class MyWindow(QtWidgets.QMainWindow):
 
         if len(self.coordinates) == 4:
             flag_draw = True
-            # define the size of the region around the selected point
-            region = 60
 
-            coord = []
-            for point in self.coordinates:
-                # create a binary mask with the selected region set to 1
-                mask = np.zeros_like(self.image[:, :, 0])
-                mask[point[1] - region: point[1] + region, point[0] - region:point[0] + region] = 1
+            if self.corner_check:
+                # define the size of the region around the selected point
+                region = 60
 
-                # detect the corner in the region around the selected point
-                accurate_cor = cv2.goodFeaturesToTrack(image=gray, maxCorners=3, qualityLevel=0.01,
-                                                       minDistance=10, mask=mask)
-                # take the one closest to the manually selected corner
-                c = accurate_cor[0]
-                dist = np.linalg.norm(c - point)
-                for a_c in accurate_cor:
-                    temp_dist = np.linalg.norm(a_c - point)
-                    if temp_dist < dist:
-                        c = a_c
-                        dist = temp_dist
+                coord = []
+                for point in self.coordinates:
+                    # create a binary mask with the selected region set to 1
+                    mask = np.zeros_like(self.image[:, :, 0])
+                    mask[point[1] - region: point[1] + region, point[0] - region:point[0] + region] = 1
 
-                coord.append(c)
+                    # detect the corner in the region around the selected point
+                    accurate_cor = cv2.goodFeaturesToTrack(image=gray, maxCorners=3, qualityLevel=0.01,
+                                                           minDistance=10, mask=mask)
+                    # take the one closest to the manually selected corner
+                    c = accurate_cor[0]
+                    dist = np.linalg.norm(c - point)
+                    for a_c in accurate_cor:
+                        temp_dist = np.linalg.norm(a_c - point)
+                        if temp_dist < dist:
+                            c = a_c
+                            dist = temp_dist
 
-            coord = np.asarray(coord).reshape(4, 1, -1).astype(np.float32)
+                    coord.append(c)
+                    coord = np.asarray(coord).reshape(4, 1, -1).astype(np.float32)
+            else:
+                coord = np.asarray(self.coordinates).reshape(4, 1, -1).astype(np.float32)
 
             # Generate a grid of points on the plane
             square_size = 50  # in pixels
@@ -202,8 +217,9 @@ class MyWindow(QtWidgets.QMainWindow):
                 print(i_fname)
                 # read source image
                 self.image = cv2.imread(i_fname)
-                gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+                self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
                 self.image = cv2.resize(self.image, [1000, 1000], None, None)
+                gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
 
                 # find corners and ret: flag of corners, boolean type
                 ret, corners = cv2.findChessboardCorners(gray, (a, b), None)
@@ -224,12 +240,12 @@ class MyWindow(QtWidgets.QMainWindow):
                     img = cv2.drawChessboardCorners(self.image, (a, b), corners2, ret)
                     self.show_image("source")
                     # save image with corners
-                    if i_fname.endswith('.png'):
-                        new_fname = i_fname.replace('Checkerboards', "Result")
-                        print(new_fname)
-                        new_fname = new_fname.replace('.png', '_Corners.png')
-                        print(new_fname)
-                    cv2.imwrite(new_fname, self.image)
+                    #if i_fname.endswith('.png'):
+                    #    new_fname = i_fname.replace('Checkerboards', "Result")
+                    #    print(new_fname)
+                    #    new_fname = new_fname.replace('.png', '_Corners.png')
+                    #    print(new_fname)
+                    #cv2.imwrite(new_fname, self.image)
 
             # Calibration
             # to estimate the intrinsic and extrinsic parameters of the camera.
@@ -240,7 +256,7 @@ class MyWindow(QtWidgets.QMainWindow):
             print("distortion", dist)
             self.result_label.setText("Camera matrix:\n" + str(mtx))
             # Save camera parameters
-            np.savez("CameraData\camera_Data.npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+            np.savez("CameraData/camera_Data_cam_4.npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
         else:
             self.result_label.setText("Please enter integer in the size of the chessboard")
 
