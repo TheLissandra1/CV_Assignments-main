@@ -138,11 +138,11 @@ class MyWindow(QtWidgets.QMainWindow):
 
         if len(self.coordinates) == 4:
             flag_draw = True
-
+            print(self.corner_check)
             if self.corner_check:
                 # define the size of the region around the selected point
-                region = 60
-
+                region = 50
+                print(self.corner_check)
                 coord = []
                 for point in self.coordinates:
                     # create a binary mask with the selected region set to 1
@@ -150,8 +150,8 @@ class MyWindow(QtWidgets.QMainWindow):
                     mask[point[1] - region: point[1] + region, point[0] - region:point[0] + region] = 1
 
                     # detect the corner in the region around the selected point
-                    accurate_cor = cv2.goodFeaturesToTrack(image=gray, maxCorners=3, qualityLevel=0.01,
-                                                           minDistance=10, mask=mask)
+                    accurate_cor = cv2.goodFeaturesToTrack(image=gray, maxCorners=5, qualityLevel=0.01,
+                                                           minDistance=5, mask=mask)
                     # take the one closest to the manually selected corner
                     c = accurate_cor[0]
                     dist = np.linalg.norm(c - point)
@@ -162,7 +162,8 @@ class MyWindow(QtWidgets.QMainWindow):
                             dist = temp_dist
 
                     coord.append(c)
-                    coord = np.asarray(coord).reshape(4, 1, -1).astype(np.float32)
+
+                coord = np.asarray(coord).reshape(4, 1, -1).astype(np.float32)
             else:
                 coord = np.asarray(self.coordinates).reshape(4, 1, -1).astype(np.float32)
 
@@ -231,6 +232,7 @@ class MyWindow(QtWidgets.QMainWindow):
                 else:
                     self.show_image("source")
                     corners, flag_draw = self.manually_draw(a, b, gray)
+                    print("done 1")
 
                 if flag_draw:
                     corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
