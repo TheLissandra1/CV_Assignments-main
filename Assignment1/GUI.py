@@ -138,11 +138,10 @@ class MyWindow(QtWidgets.QMainWindow):
 
         if len(self.coordinates) == 4:
             flag_draw = True
-            print(self.corner_check)
+
             if self.corner_check:
                 # define the size of the region around the selected point
                 region = 50
-                print(self.corner_check)
                 coord = []
                 for point in self.coordinates:
                     # create a binary mask with the selected region set to 1
@@ -232,7 +231,6 @@ class MyWindow(QtWidgets.QMainWindow):
                 else:
                     self.show_image("source")
                     corners, flag_draw = self.manually_draw(a, b, gray)
-                    print("done 1")
 
                 if flag_draw:
                     corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
