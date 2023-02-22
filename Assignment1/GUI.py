@@ -3,7 +3,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
 import numpy as np
-
+import os
 np.set_printoptions(suppress=True)
 
 
@@ -255,8 +255,43 @@ class MyWindow(QtWidgets.QMainWindow):
             print("camera matrix:", mtx)
             print("distortion", dist)
             self.result_label.setText("Camera matrix:\n" + str(mtx))
+
             # Save camera parameters
-            np.savez("CameraData/camera_Data_cam_4.npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+            camera_data_fname = "Assignment1\CameraData\cam1\camera_Data_cam_1.npz"
+            np.savez(camera_data_fname, mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+
+
+            # to obtain the rotation and translation
+            ret, rvec, tvec = cv2.solvePnP(objectPoints=objp, imagePoints=corners2, cameraMatrix=mtx, distCoeffs=dist, 
+             useExtrinsicGuess=False, flags=cv2.SOLVEPNP_ITERATIVE)
+            print("Extrinsic parameters:")
+            print("rvec_solvePnP: " , rvec)
+            print(type(rvec))
+            print("tvec_solvePnP: " , tvec)
+
+            
+            # get rotation matrix R
+            rotationMtx, _ = cv2.Rodrigues(src=np.asarray(rvec))
+            print("Rotation matrix_Rodrigues: ", rotationMtx)
+
+            tvec = np.asarray(tvec)
+            extrinsic_Matrix = np.concatenate((rotationMtx, tvec), axis=1)
+            print(type(extrinsic_Matrix))
+            print("Extrinsic Matrix: ", extrinsic_Matrix)
+
+            # save extrinsic matrix into .txt file
+            cam_path, cam_name = os.path.split(camera_data_fname)
+            txt_name, _ = os.path.splitext(cam_name)
+            save_path = cam_path + "\Extrinsic_" + txt_name
+            
+            np.savez(save_path, Intrinsic=mtx, Extrinsic=extrinsic_Matrix)
+        
+
+            
+
+
+
+
         else:
             self.result_label.setText("Please enter integer in the size of the chessboard")
 
