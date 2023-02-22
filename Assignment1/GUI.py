@@ -222,7 +222,9 @@ class MyWindow(QtWidgets.QMainWindow):
                 gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
 
                 # find corners and ret: flag of corners, boolean type
-                ret, corners = cv2.findChessboardCorners(gray, (a, b), None)
+                ret, corners = cv2.findChessboardCorners(gray, (a, b), None, cv2.CALIB_CB_ADAPTIVE_THRESH
+                                                         + cv2.CALIB_CB_NORMALIZE_IMAGE
+                                                         + cv2.CALIB_CB_FAST_CHECK)
                 print(ret)
 
                 if ret:
@@ -240,12 +242,12 @@ class MyWindow(QtWidgets.QMainWindow):
                     img = cv2.drawChessboardCorners(self.image, (a, b), corners2, ret)
                     self.show_image("source")
                     # save image with corners
-                    #if i_fname.endswith('.png'):
+                    # if i_fname.endswith('.png'):
                     #    new_fname = i_fname.replace('Checkerboards', "Result")
                     #    print(new_fname)
                     #    new_fname = new_fname.replace('.png', '_Corners.png')
                     #    print(new_fname)
-                    #cv2.imwrite(new_fname, self.image)
+                    # cv2.imwrite(new_fname, self.image)
 
             # Calibration
             # to estimate the intrinsic and extrinsic parameters of the camera.
@@ -319,7 +321,9 @@ class MyWindow(QtWidgets.QMainWindow):
             flag_draw = False
 
             gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)  # gray-scale
-            ret, corners = cv2.findChessboardCorners(gray, (a, b), None)
+            ret, corners = cv2.findChessboardCorners(gray, (a, b), None, cv2.CALIB_CB_ADAPTIVE_THRESH
+                                                     + cv2.CALIB_CB_NORMALIZE_IMAGE
+                                                     + cv2.CALIB_CB_FAST_CHECK)
 
             if ret:
                 flag_draw = True
