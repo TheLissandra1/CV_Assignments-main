@@ -40,7 +40,7 @@ avg_frame = cv2.convertScaleAbs(avg_frame / frame_count)
 
 # Display the average frame
 cv2.imshow('Average Frame', avg_frame)
-file_path = r'Assignment2\Computer-Vision-3D-Reconstruction-master\data\cam4\cam4_background_Avg.png'
+file_path = r'Assignment2\data\cam4\cam4_background_Avg.png'
 cv2.imwrite(file_path, avg_frame)
 cv2.waitKey(0)
 
