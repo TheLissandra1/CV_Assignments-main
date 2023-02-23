@@ -65,7 +65,7 @@ class MyWindow(QtWidgets.QMainWindow):
         # QPushButton to get extrinsic matrix
         self.ex_button = QtWidgets.QPushButton('Get extrinsic matrix')
         self.ex_button.clicked.connect(self.get_extrinsic)
-        self.ex_button.setEnabled(True)
+        self.ex_button.setEnabled(False)
 
         # QLabel to present the loaded image
         self.image_label = QtWidgets.QLabel()
@@ -282,7 +282,7 @@ class MyWindow(QtWidgets.QMainWindow):
             self.result_label.setText("Please enter integer in the size of the chessboard")
 
     def get_extrinsic(self):
-        # self.saved_path = "CameraData/cam4/camera_Data_cam_4.npz"
+        # self.saved_path = "CameraData/cam1/camera_Data_cam_1.npz"
         if len(self.width.text()) == 0 or len(self.height.text()) == 0:
             self.result_label.setText("Please enter the size of the chessboard")
 
@@ -291,74 +291,75 @@ class MyWindow(QtWidgets.QMainWindow):
             file_name, _ = QFileDialog.getOpenFileName(self, 'Open Image', '',
                                                        'Images (*.png *.xpm *.jpg *.bmp *.gif *.pbm *.pgm *.ppm *.xbm *.xpm);;All Files (*)',
                                                        options=options)
+            if file_name:
+                # size of checkerboard: a*b
+                a = int(self.width.text())
+                b = int(self.height.text())
+                objp = np.zeros((a * b, 3), np.float32)
+                objp[:, :2] = (115 * np.mgrid[0:a, 0:b]).T.reshape(-1, 2)
 
-            # size of checkerboard: a*b
-            a = int(self.width.text())
-            b = int(self.height.text())
-            objp = np.zeros((a * b, 3), np.float32)
-            objp[:, :2] = (115 * np.mgrid[0:a, 0:b]).T.reshape(-1, 2)
+                objpoints = []  # 3d point in real world space
+                imgpoints = []  # 2d points in image plane.
+                flag_draw = False
 
-            objpoints = []  # 3d point in real world space
-            imgpoints = []  # 2d points in image plane.
-            flag_draw = False
+                self.set_image(file_name)
+                gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
 
-            self.set_image(file_name)
-            gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+                # find corners and ret: flag of corners, boolean type
+                ret, corners = cv2.findChessboardCorners(gray, (a, b), cv2.CALIB_CB_ADAPTIVE_THRESH
+                                                         + cv2.CALIB_CB_NORMALIZE_IMAGE
+                                                         + cv2.CALIB_CB_FAST_CHECK)
+                print(ret)
 
-            # find corners and ret: flag of corners, boolean type
-            ret, corners = cv2.findChessboardCorners(gray, (a, b), cv2.CALIB_CB_ADAPTIVE_THRESH
-                                                     + cv2.CALIB_CB_NORMALIZE_IMAGE
-                                                     + cv2.CALIB_CB_FAST_CHECK)
-            print(ret)
+                if ret:
+                    flag_draw = True
 
-            if ret:
-                flag_draw = True
+                else:
+                    self.show_image("source")
+                    corners, flag_draw = self.manually_draw(a, b, gray)
 
-            else:
-                self.show_image("source")
-                corners, flag_draw = self.manually_draw(a, b, gray)
+                if flag_draw:
+                    corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), self.criteria)
+                    imgpoints.append(corners2)
+                    objpoints.append(objp)
+                    self.show_image("source")
 
-            if flag_draw:
-                corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), self.criteria)
-                imgpoints.append(corners2)
-                objpoints.append(objp)
-                self.show_image("source")
+                # Load previously saved data
+                with np.load(self.saved_path) as X:
+                    mtx, dist, _, _ = [X[i] for i in ('mtx', 'dist', 'rvecs', 'tvecs')]
 
-            # Load previously saved data
-            with np.load(self.saved_path) as X:
-                mtx, dist, _, _ = [X[i] for i in ('mtx', 'dist', 'rvecs', 'tvecs')]
+                # to obtain the rotation and translation
+                ret, rvec, tvec = cv2.solvePnP(objectPoints=objp, imagePoints=corners2, cameraMatrix=mtx, distCoeffs=dist,
+                                               useExtrinsicGuess=False, flags=cv2.SOLVEPNP_ITERATIVE)
+                print("Extrinsic parameters:")
+                print("rvec_solvePnP: ", rvec)
+                print(type(rvec))
+                print("tvec_solvePnP: ", tvec)
 
-            # to obtain the rotation and translation
-            ret, rvec, tvec = cv2.solvePnP(objectPoints=objp, imagePoints=corners2, cameraMatrix=mtx, distCoeffs=dist,
-                                           useExtrinsicGuess=False, flags=cv2.SOLVEPNP_ITERATIVE)
-            print("Extrinsic parameters:")
-            print("rvec_solvePnP: ", rvec)
-            print(type(rvec))
-            print("tvec_solvePnP: ", tvec)
+                # Project 3D points to image plane
+                axis = np.float32([[500, 0, 0], [0, 500, 0], [0, 0, -500]]).reshape(-1, 3)
+                imgpts, jac = cv2.projectPoints(axis, rvec, tvec, mtx, dist)
+                img_line = drawCube.draw_line(self.image, corners2, imgpts)
+                img_line = cv2.cvtColor(img_line, cv2.COLOR_BGR2RGB)
+                self.show_image()
 
-            # Project 3D points to image plane
-            axis = np.float32([[500, 0, 0], [0, 500, 0], [0, 0, -500]]).reshape(-1, 3)
-            imgpts, jac = cv2.projectPoints(axis, rvec, tvec, mtx, dist)
-            img_line = drawCube.draw_line(self.image, corners2, imgpts)
-            self.show_image()
+                # get rotation matrix R
+                rotationMtx, _ = cv2.Rodrigues(src=np.asarray(rvec))
+                print("Rotation matrix_Rodrigues: ", rotationMtx)
 
-            # get rotation matrix R
-            rotationMtx, _ = cv2.Rodrigues(src=np.asarray(rvec))
-            print("Rotation matrix_Rodrigues: ", rotationMtx)
+                tvec = np.asarray(tvec)
+                extrinsic_Matrix = np.concatenate((rotationMtx, tvec), axis=1)
+                print(type(extrinsic_Matrix))
+                print("Extrinsic Matrix: ", extrinsic_Matrix)
 
-            tvec = np.asarray(tvec)
-            extrinsic_Matrix = np.concatenate((rotationMtx, tvec), axis=1)
-            print(type(extrinsic_Matrix))
-            print("Extrinsic Matrix: ", extrinsic_Matrix)
+                # save extrinsic matrix
+                cam_path, cam_name = os.path.split(self.saved_path)
+                txt_name, _ = os.path.splitext(cam_name)
+                save_path = cam_path + "/Extrinsic_" + txt_name
+                img_path = cam_path + "/line_" + txt_name + ".png"
+                cv2.imwrite(img_path, img_line)
 
-            # save extrinsic matrix
-            cam_path, cam_name = os.path.split(self.saved_path)
-            txt_name, _ = os.path.splitext(cam_name)
-            save_path = cam_path + "/Extrinsic_" + txt_name
-            img_path = cam_path + "/line_" + txt_name + ".png"
-            cv2.imwrite(img_path, img_line)
-
-            np.savez(save_path, Intrinsic=mtx, Extrinsic=extrinsic_Matrix)
+                np.savez(save_path, Intrinsic=mtx, Extrinsic=extrinsic_Matrix)
 
     def show_image(self, position="result"):
         h, w, channel = self.image.shape
