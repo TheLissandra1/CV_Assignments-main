@@ -4,6 +4,8 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
 import numpy as np
 import os
+import drawCube
+
 np.set_printoptions(suppress=True)
 
 
@@ -16,6 +18,8 @@ class MyWindow(QtWidgets.QMainWindow):
         self.coordinates = []
         self.img_copy = None
         self.corner_check = False
+        self.saved_path = None
+        self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         self.initUI()
 
     def initUI(self):
@@ -58,6 +62,11 @@ class MyWindow(QtWidgets.QMainWindow):
         self.all_button.clicked.connect(self.run_All)
         self.all_button.setEnabled(True)
 
+        # QPushButton to get extrinsic matrix
+        self.ex_button = QtWidgets.QPushButton('Get extrinsic matrix')
+        self.ex_button.clicked.connect(self.get_extrinsic)
+        self.ex_button.setEnabled(True)
+
         # QLabel to present the loaded image
         self.image_label = QtWidgets.QLabel()
 
@@ -74,6 +83,7 @@ class MyWindow(QtWidgets.QMainWindow):
         button_group_box_layout.addWidget(self.load_button, alignment=QtCore.Qt.AlignTop)
         button_group_box_layout.addWidget(self.draw_button, alignment=QtCore.Qt.AlignTop)
         button_group_box_layout.addWidget(self.all_button, alignment=QtCore.Qt.AlignTop)
+        button_group_box_layout.addWidget(self.ex_button, alignment=QtCore.Qt.AlignTop)
 
         # Set the layout for the group box
         button_group_box.setLayout(button_group_box_layout)
@@ -98,6 +108,12 @@ class MyWindow(QtWidgets.QMainWindow):
         central_widget = QtWidgets.QWidget()
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
+
+    # set loaded image
+    def set_image(self, file_name):
+        self.image = cv2.imread(file_name)
+        self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+        self.image = cv2.resize(self.image, [1000, 1000], None, None)
 
     def click_box(self, state):
         if state == QtCore.Qt.Checked:
@@ -180,6 +196,7 @@ class MyWindow(QtWidgets.QMainWindow):
             plane_corners = np.array([[0, 0], [(a - 1) * square_size, 0], [0, (b - 1) * square_size],
                                       [(a - 1) * square_size, (b - 1) * square_size]],
                                      dtype=np.float32).reshape(4, 1, -1)
+            # M = cv2.getPerspectiveTransform(plane_corners, coord)
             M = cv2.findHomography(plane_corners, coord)[0]
             corners = cv2.perspectiveTransform(grid_points, M)
             self.coordinates.clear()
@@ -201,12 +218,11 @@ class MyWindow(QtWidgets.QMainWindow):
                                                          'Images (*.png *.xpm *.jpg *.bmp *.gif *.pbm *.pgm *.ppm *.xbm *.xpm);;All Files (*)',
                                                          options=options)
 
-            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
             # size of checkerboard: a*b
             a = int(self.width.text())
             b = int(self.height.text())
             objp = np.zeros((a * b, 3), np.float32)
-            objp[:, :2] = np.mgrid[0:a, 0:b].T.reshape(-1, 2)
+            objp[:, :2] = (115 * np.mgrid[0:a, 0:b]).T.reshape(-1, 2)
 
             objpoints = []  # 3d point in real world space
             imgpoints = []  # 2d points in image plane.
@@ -216,13 +232,11 @@ class MyWindow(QtWidgets.QMainWindow):
             for i_fname in file_names:
                 print(i_fname)
                 # read source image
-                self.image = cv2.imread(i_fname)
-                self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
-                self.image = cv2.resize(self.image, [1000, 1000], None, None)
+                self.set_image(i_fname)
                 gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
 
                 # find corners and ret: flag of corners, boolean type
-                ret, corners = cv2.findChessboardCorners(gray, (a, b), None, cv2.CALIB_CB_ADAPTIVE_THRESH
+                ret, corners = cv2.findChessboardCorners(gray, (a, b), cv2.CALIB_CB_ADAPTIVE_THRESH
                                                          + cv2.CALIB_CB_NORMALIZE_IMAGE
                                                          + cv2.CALIB_CB_FAST_CHECK)
                 print(ret)
@@ -235,7 +249,7 @@ class MyWindow(QtWidgets.QMainWindow):
                     corners, flag_draw = self.manually_draw(a, b, gray)
 
                 if flag_draw:
-                    corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+                    corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), self.criteria)
                     imgpoints.append(corners2)
                     objpoints.append(objp)
                     # Draw and display the corners
@@ -259,19 +273,75 @@ class MyWindow(QtWidgets.QMainWindow):
             self.result_label.setText("Camera matrix:\n" + str(mtx))
 
             # Save camera parameters
-            camera_data_fname = "Assignment1\CameraData\cam1\camera_Data_cam_1.npz"
+            camera_data_fname = "CameraData/cam4/camera_Data_cam_4.npz"
             np.savez(camera_data_fname, mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+            self.saved_path = camera_data_fname
+            self.ex_button.setEnabled(True)
 
+        else:
+            self.result_label.setText("Please enter integer in the size of the chessboard")
+
+    def get_extrinsic(self):
+        # self.saved_path = "CameraData/cam4/camera_Data_cam_4.npz"
+        if len(self.width.text()) == 0 or len(self.height.text()) == 0:
+            self.result_label.setText("Please enter the size of the chessboard")
+
+        elif self.width.text().isdigit() and self.height.text().isdigit():
+            options = QtWidgets.QFileDialog.Options()
+            file_name, _ = QFileDialog.getOpenFileName(self, 'Open Image', '',
+                                                       'Images (*.png *.xpm *.jpg *.bmp *.gif *.pbm *.pgm *.ppm *.xbm *.xpm);;All Files (*)',
+                                                       options=options)
+
+            # size of checkerboard: a*b
+            a = int(self.width.text())
+            b = int(self.height.text())
+            objp = np.zeros((a * b, 3), np.float32)
+            objp[:, :2] = (115 * np.mgrid[0:a, 0:b]).T.reshape(-1, 2)
+
+            objpoints = []  # 3d point in real world space
+            imgpoints = []  # 2d points in image plane.
+            flag_draw = False
+
+            self.set_image(file_name)
+            gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+
+            # find corners and ret: flag of corners, boolean type
+            ret, corners = cv2.findChessboardCorners(gray, (a, b), cv2.CALIB_CB_ADAPTIVE_THRESH
+                                                     + cv2.CALIB_CB_NORMALIZE_IMAGE
+                                                     + cv2.CALIB_CB_FAST_CHECK)
+            print(ret)
+
+            if ret:
+                flag_draw = True
+
+            else:
+                self.show_image("source")
+                corners, flag_draw = self.manually_draw(a, b, gray)
+
+            if flag_draw:
+                corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), self.criteria)
+                imgpoints.append(corners2)
+                objpoints.append(objp)
+                self.show_image("source")
+
+            # Load previously saved data
+            with np.load(self.saved_path) as X:
+                mtx, dist, _, _ = [X[i] for i in ('mtx', 'dist', 'rvecs', 'tvecs')]
 
             # to obtain the rotation and translation
-            ret, rvec, tvec = cv2.solvePnP(objectPoints=objp, imagePoints=corners2, cameraMatrix=mtx, distCoeffs=dist, 
-             useExtrinsicGuess=False, flags=cv2.SOLVEPNP_ITERATIVE)
+            ret, rvec, tvec = cv2.solvePnP(objectPoints=objp, imagePoints=corners2, cameraMatrix=mtx, distCoeffs=dist,
+                                           useExtrinsicGuess=False, flags=cv2.SOLVEPNP_ITERATIVE)
             print("Extrinsic parameters:")
-            print("rvec_solvePnP: " , rvec)
+            print("rvec_solvePnP: ", rvec)
             print(type(rvec))
-            print("tvec_solvePnP: " , tvec)
+            print("tvec_solvePnP: ", tvec)
 
-            
+            # Project 3D points to image plane
+            axis = np.float32([[500, 0, 0], [0, 500, 0], [0, 0, -500]]).reshape(-1, 3)
+            imgpts, jac = cv2.projectPoints(axis, rvec, tvec, mtx, dist)
+            img_line = drawCube.draw_line(self.image, corners2, imgpts)
+            self.show_image()
+
             # get rotation matrix R
             rotationMtx, _ = cv2.Rodrigues(src=np.asarray(rvec))
             print("Rotation matrix_Rodrigues: ", rotationMtx)
@@ -281,21 +351,14 @@ class MyWindow(QtWidgets.QMainWindow):
             print(type(extrinsic_Matrix))
             print("Extrinsic Matrix: ", extrinsic_Matrix)
 
-            # save extrinsic matrix into .txt file
-            cam_path, cam_name = os.path.split(camera_data_fname)
+            # save extrinsic matrix
+            cam_path, cam_name = os.path.split(self.saved_path)
             txt_name, _ = os.path.splitext(cam_name)
-            save_path = cam_path + "\Extrinsic_" + txt_name
-            
+            save_path = cam_path + "/Extrinsic_" + txt_name
+            img_path = cam_path + "/line_" + txt_name + ".png"
+            cv2.imwrite(img_path, img_line)
+
             np.savez(save_path, Intrinsic=mtx, Extrinsic=extrinsic_Matrix)
-        
-
-            
-
-
-
-
-        else:
-            self.result_label.setText("Please enter integer in the size of the chessboard")
 
     def show_image(self, position="result"):
         h, w, channel = self.image.shape
@@ -333,10 +396,7 @@ class MyWindow(QtWidgets.QMainWindow):
                                                    'Images (*.png *.xpm *.jpg *.bmp *.gif *.pbm *.pgm *.ppm *.xbm *.xpm);;All Files (*)',
                                                    options=options)
         if file_name:
-            self.image = cv2.imread(file_name)
-            self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
-            # image is too large, resize it
-            self.image = cv2.resize(self.image, [1000, 1000], None, None)
+            self.set_image(file_name)
             self.show_image("source")
 
     # click function to draw corners of loaded image
@@ -345,7 +405,6 @@ class MyWindow(QtWidgets.QMainWindow):
             self.result_label.setText("Please enter the size of the chessboard")
 
         elif self.width.text().isdigit() and self.height.text().isdigit():
-            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
             a = int(self.width.text())
             b = int(self.height.text())
             objp = np.zeros((a * b, 3), np.float32)
@@ -356,7 +415,7 @@ class MyWindow(QtWidgets.QMainWindow):
             flag_draw = False
 
             gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)  # gray-scale
-            ret, corners = cv2.findChessboardCorners(gray, (a, b), None, cv2.CALIB_CB_ADAPTIVE_THRESH
+            ret, corners = cv2.findChessboardCorners(gray, (a, b), cv2.CALIB_CB_ADAPTIVE_THRESH
                                                      + cv2.CALIB_CB_NORMALIZE_IMAGE
                                                      + cv2.CALIB_CB_FAST_CHECK)
 
@@ -366,7 +425,7 @@ class MyWindow(QtWidgets.QMainWindow):
                 corners, flag_draw = self.manually_draw(a, b, gray)
 
             if flag_draw:
-                corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+                corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), self.criteria)
                 objpoints.append(objp)
                 imgpoints.append(corners2)
                 # Detect the calibration pattern in image:

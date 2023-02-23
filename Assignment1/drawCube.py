@@ -9,10 +9,12 @@ np.set_printoptions(suppress=True)
 # draw 3D coordinates axies
 def draw_line(img, corners, imgpts):
     corner = tuple(corners[0].ravel())
+
     ## Attention! data type must be transformed into int32, or OpenCV will report bugs
-    img = cv2.line(img, np.int32(corner), np.int32(tuple(imgpts[0].ravel())), (255, 0, 0), 15)
-    img = cv2.line(img, np.int32(corner), np.int32(tuple(imgpts[1].ravel())), (0, 255, 0), 15)
-    img = cv2.line(img, np.int32(corner), np.int32(tuple(imgpts[2].ravel())), (0, 0, 255), 15)
+    img = cv2.line(img, np.int32(corner), np.int32(tuple(imgpts[0].ravel())), (255, 0, 0), 4)
+    img = cv2.line(img, np.int32(corner), np.int32(tuple(imgpts[1].ravel())), (0, 255, 0), 4)
+    img = cv2.line(img, np.int32(corner), np.int32(tuple(imgpts[2].ravel())), (0, 0, 255), 4)
+    cv2.circle(img, np.int32(corner), 3, (255, 255, 0), 8)
     return img
 
 
@@ -74,15 +76,12 @@ if __name__ == '__main__':
             imgpts, jac = cv2.projectPoints(axis, rvecs, tvecs, mtx, dist)
             img_line = draw_line(img, corners2, imgpts)
 
-            # Cube point
-            imgpts_cube, jac_cube = cv2.projectPoints(axis_cube, rvecs, tvecs, mtx, dist)
-            # # draw cube to the axis image
-            img_cube = draw_cube(img_line, imgpts_cube)
+
             # cv2.namedWindow('image with line', 0)
             # cv2.resizeWindow('image with line', 1000, 1000)
             cv2.namedWindow('image with cube', 0)
             cv2.resizeWindow('image with cube', 1000, 1000)
-            cv2.imshow('image with cube', img_cube)
+            cv2.imshow('image with cube', img_line)
             k = cv2.waitKey(0) & 0xFF
 
             if fname.endswith('.png'):
