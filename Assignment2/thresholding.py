@@ -6,40 +6,49 @@ threshold_value = 25
 max_value = 255
 
 
-def auto_threshold(img, start_thresh, step, goal=18000, max_goal=20000, max_thresh=255, flag=cv2.THRESH_BINARY):
+def get_contour(img, min_c):
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2, 2))
+    img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
+    img = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
+
+    # Get contours
+    contours = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours = contours[0] if len(contours) == 2 else contours[1]
+
+    # noise points
+    small_contours = []
+    for con in contours:
+        area = cv2.contourArea(con)
+        if 0 < area < min_c:
+            small_contours.append(con)
+
+    # max contour: foreground
+    max_contour = max(contours, key=cv2.contourArea)
+
+    return img, contours, max_contour, small_contours
+
+
+def auto_threshold(img, start_thresh, step, goal=17000, max_goal=20000, max_thresh=255, flag=cv2.THRESH_BINARY):
     threshold = start_thresh
     while True:
-        ret, closing = cv2.threshold(img, threshold, max_thresh, type=flag)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-        closing = cv2.morphologyEx(closing, cv2.MORPH_CLOSE, kernel)
-        # closing = cv2.dilate(closing, kernel)
+        ret, thresh = cv2.threshold(img, threshold, max_thresh, type=flag)
 
-        # Get contours
-        contours = cv2.findContours(closing, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours = contours[0] if len(contours) == 2 else contours[1]
+        im, contours, max_contour, small_contours = get_contour(thresh, 4000)
 
-        # noise points
-        small_contours = []
-        for con in contours:
-            area = cv2.contourArea(con)
-            if 0 < area < 9000:
-                small_contours.append(con)
-
-        # max contour: foreground
-        max_contour = max(contours, key=cv2.contourArea)
         max_area = cv2.contourArea(max_contour)
         if max_area >= goal:
             if max_area >= max_goal:
                 threshold = threshold + step
-                ret, closing = cv2.threshold(img, threshold, max_thresh, type=flag)
-                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-                closing = cv2.morphologyEx(closing, cv2.MORPH_CLOSE, kernel)
-            cv2.drawContours(closing, small_contours, -1, (0, 0, 0), cv2.FILLED)
+                ret, thresh = cv2.threshold(img, threshold, max_thresh, type=flag)
+                im, contours, max_contour, small_contours = get_contour(thresh, 9000)
+            cv2.drawContours(im, small_contours, -1, (0, 0, 0), cv2.FILLED)
+            cv2.drawContours(im, [max_contour], -1, (255, 255, 255), cv2.FILLED)
+
             break
         else:
             threshold = threshold - step
 
-    return closing, threshold
+    return im, threshold
 
 
 def threshold(hsv, flag=cv2.THRESH_BINARY):
@@ -68,11 +77,18 @@ def threshold(hsv, flag=cv2.THRESH_BINARY):
         i = i + 1
     a = cv2.bitwise_and(outputs[0], outputs[1])
     a = cv2.bitwise_and(outputs[2], a)
+
+    t1 = cv2.bitwise_and(outputs[0], outputs[1])
+    t2 = cv2.bitwise_and(outputs[0], outputs[2])
+    t3 = cv2.bitwise_and(outputs[1], outputs[2])
+
+    a = cv2.bitwise_or(t1, t2)
+    a = cv2.bitwise_or(a, t3)
+
     # apply morphology open then close
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     a = cv2.morphologyEx(a, cv2.MORPH_CLOSE, kernel, iterations=4)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2, 2))
-    a = cv2.morphologyEx(a, cv2.MORPH_OPEN, kernel, iterations=2)
+    a = cv2.morphologyEx(a, cv2.MORPH_OPEN, kernel, iterations=3)
 
     # Get contours
     contours = cv2.findContours(a, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
