@@ -25,13 +25,38 @@ def set_voxel_positions(width, height, depth):
     # Generates random voxel locations
     # TODO: You need to calculate proper voxel arrays instead of random ones.
     
+    #  create the lookup-table for the valid voxel back-projections onto each of the camera’s FoVs
+    # So, given a position in R3, we need a projection of it in R2.
+    #  Luckily this can be done by the OpenCV function projectPoints. 
+    # The projectPoints-method requires (aside from input and output points) the calibration matrices, 
+    # which have to be saved in data/camX/config.xml:
+    # imgpts, jac = cv2.projectPoints(objectPoints, rVec, tVec, intrisicMat, distCoeffs, projectedPoints)
 
+    # 
+
+    rvec_cam1 = cv2.Rodrigues(src=np.asarray(rmtx_cam1))
+
+    # 3d points
+    objectPoints = []
+    objp = np.float32([[width, 0, 0], [0, height, 0], [0, 0, depth]]).reshape(-1, 3)
+    objectPoints.append(objp)
+    # 2d points
+    projectedPoints = []
+    projectedPoints, jac = cv2.projectPoints(objectPoints, rvec_cam1, tvec_cam1, intrinsic_mtx_cam1, 
+                                    distCoeffs_cam1)
+
+
+    data = projectedPoints
     data = []
     for x in range(width):
         for y in range(height):
             for z in range(depth):
                 if random.randint(0, 1000) < 5:
                     data.append([x*block_size - width/2, y*block_size, z*block_size - depth/2])
+
+
+    # 先projection再循环
+    print(data)
     return data
 
 
@@ -45,16 +70,28 @@ def get_cam_positions():
     C_cam2 = -np.matrix(rmtx_cam2).T * np.matrix(tvec_cam2)
     C_cam3 = -np.matrix(rmtx_cam3).T * np.matrix(tvec_cam3)
     C_cam4 = -np.matrix(rmtx_cam4).T * np.matrix(tvec_cam4)
-    print(C_cam1.T[0])
-    print(C_cam2.T[0])
-    print(C_cam3.T[0])
-    print(C_cam4.T[0])
+    
+    # concatenate 4 cam positions into one array
+    cams_3d = np.array(C_cam1.T[0])
+    cams_3d = np.concatenate((cams_3d, np.array(C_cam2.T[0])), axis=0)
+    cams_3d = np.concatenate((cams_3d, np.array(C_cam3.T[0])), axis=0)
+    cams_3d = np.concatenate((cams_3d, np.array(C_cam4.T[0])), axis=0)
+    cams_3d = cams_3d/100
 
+    # exchange y and z coordinates, minus changed y coordinates
+    # y1 = -z0, z1 = y0
+    for i in range(len(cams_3d)):
+        c = cams_3d[i][1]
+        cams_3d[i][1] = -cams_3d[i][2]
+        cams_3d[i][2] = c
+    print(cams_3d)
 
-    return [np.asarray(C_cam1.T)[0]*0.01, 
-            np.asarray(C_cam2.T)[0]*0.01, 
-            np.asarray(C_cam3.T)[0]*0.01, 
-            np.asarray(C_cam4.T)[0]*0.01]
+    # cams_3d = np.array([[2720.192 ,  1090.0698,  3051.115], 
+    #                     [ 368.86923,  1157.011,  3410.093 ], 
+    #                     [3074.9678, 1106.0835,    412.38507],
+    #                     [-2246.4001, 1180.3229,  3075.0542]])/100
+    
+    return cams_3d
 
     # return [[-64 * block_size, 64 * block_size, 63 * block_size],
     #         [63 * block_size, 64 * block_size, 63 * block_size],
@@ -89,42 +126,38 @@ def get_cam_rotation_matrices():
     # Generates dummy camera rotation matrices, looking down 45 degrees towards the center of the room
     # TODO: You need to input the estimated camera rotation matrices (4x4) of the 4 cameras in the world coordinates.
     
-    # Completed
-
+    # need to transform rotation matrix
+    # rotation = glm.rotate(rotation, np.pi / 2, [0, 0, 1])
     # camera rotation matrices in (4x4) form
-    rotation_mtx_cam1 = expandTo4x4(rmtx_cam1)
-    rotation_mtx_cam2 = expandTo4x4(rmtx_cam2)
-    rotation_mtx_cam3 = expandTo4x4(rmtx_cam3)
-    rotation_mtx_cam4 = expandTo4x4(rmtx_cam4)
-
-
-    cam_angles = [[0, 45, -45], [0, 135, -45], [0, 225, -45], [0, 315, -45]]
-    # cam_rotations = [glm.mat4(1), glm.mat4(1), glm.mat4(1), glm.mat4(1)]
-
-    '''
-    Nisha
-    '''
-    cam_rotations = [rotation_mtx_cam1, rotation_mtx_cam2, rotation_mtx_cam3, rotation_mtx_cam4]
-    cam_tvecs = [tvec_cam1, tvec_cam2, tvec_cam3, tvec_cam4]
+    rotation_mtx_cam1 = glm.mat4x4(expandTo4x4(rmtx_cam1))
+    rotation_mtx_cam2 = glm.mat4x4(expandTo4x4(rmtx_cam2))
+    rotation_mtx_cam3 = glm.mat4x4(expandTo4x4(rmtx_cam3))
+    rotation_mtx_cam4 = glm.mat4x4(expandTo4x4(rmtx_cam4))
+    # print("rotation matrix")
+    # print(rotation_mtx_cam1)
+    # print(rotation_mtx_cam2)
+    # print(rotation_mtx_cam3)
+    # print(rotation_mtx_cam4)
     
+    rotation_mtx_cam1 = glm.rotate(rotation_mtx_cam1, np.pi/2, [0,0,1])
+    rotation_mtx_cam2 = glm.rotate(rotation_mtx_cam2, np.pi/2, [0,0,1])
+    rotation_mtx_cam3 = glm.rotate(rotation_mtx_cam3, np.pi/2, [0,0,1])
+    rotation_mtx_cam4 = glm.rotate(rotation_mtx_cam4, np.pi/2, [0,0,1])
 
-    # glm.rotate(angle: Number, axis: vector3), -> dmat4x4
-    for c in range(len(cam_rotations)):
-        # translate the world/view position
-        # See PyGLM wiki documentation
-        # For matrix: transform numpy.ndarray into <class 'glm.mat4x4'> first
-        cam_rotations[c] = glm.mat4(cam_rotations[c])
-        # For vector: transform numpy.ndarray into <class 'glm.vec3'>
-        cam_tvecs[c] = glm.vec3(cam_tvecs[c][0], cam_tvecs[c][1], cam_tvecs[c][2])
-        cam_rotations[c] = glm.translate(cam_rotations[c], cam_tvecs[c])
-        # cam_rotations[c] = glm.rotate(cam_rotations[c], cam_angles[c][0] * np.pi / 180, [1, 0, 0])
-        # cam_rotations[c] = glm.rotate(cam_rotations[c], cam_angles[c][1] * np.pi / 180, [0, 1, 0])
-        # cam_rotations[c] = glm.rotate(cam_rotations[c], cam_angles[c][2] * np.pi / 180, [0, 0, 1])
+    cam_rotations = [rotation_mtx_cam1, rotation_mtx_cam2, rotation_mtx_cam3, rotation_mtx_cam4]
+    # cam_tvecs = [tvec_cam1, tvec_cam2, tvec_cam3, tvec_cam4]
+    # print("translation vector: ", tvec_cam1)
+    # print(tvec_cam2)
+    # print(tvec_cam3)
+    # print(tvec_cam4)
+    # print(tvec_cam4)
+    
+    # # glm.rotate(angle: Number, axis: vector3), -> dmat4x4
     return cam_rotations
 
 # load cam data from config.xml files: 
 # intrinsic matrix, distortionCoefficients, rotation matrix R, translation vector T
-intrinsic_mtx, distCoeffs, rmtx_cam1, tvec_cam1 = readCamConfig(config_cam1)
+intrinsic_mtx_cam1, distCoeffs_cam1, rmtx_cam1, tvec_cam1 = readCamConfig(config_cam1)
 intrinsic_mtx, distCoeffs, rmtx_cam2, tvec_cam2 = readCamConfig(config_cam2)
 intrinsic_mtx, distCoeffs, rmtx_cam3, tvec_cam3 = readCamConfig(config_cam3)
 intrinsic_mtx, distCoeffs, rmtx_cam4, tvec_cam4 = readCamConfig(config_cam4)
