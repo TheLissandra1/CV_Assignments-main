@@ -12,7 +12,7 @@ def auto_threshold(img, start_thresh, step, goal=18000, max_goal=20000, max_thre
         ret, closing = cv2.threshold(img, threshold, max_thresh, type=flag)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
         closing = cv2.morphologyEx(closing, cv2.MORPH_CLOSE, kernel)
-        #closing = cv2.dilate(closing, kernel)
+        # closing = cv2.dilate(closing, kernel)
 
         # Get contours
         contours = cv2.findContours(closing, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -57,12 +57,12 @@ def threshold(hsv, flag=cv2.THRESH_BINARY):
 
         thresh, t = auto_threshold(blurred, 100, 2)
         print(t)
-        #ret, thresh = cv2.threshold(blurred, 10, max_value, type=flag)
+        # ret, thresh = cv2.threshold(blurred, 10, max_value, type=flag)
 
         # display thresholded image
         cv2.imshow('Thresholded Image', thresh)
         cv2.waitKey(0)
-        #cv2.imwrite("step2\cam1\diff\Diff_threshold" + "_" + str(i) + ".png", thresh)
+        # cv2.imwrite("step2\cam1\diff\Diff_threshold" + "_" + str(i) + ".png", thresh)
         # release resources and close windows
         outputs.append(thresh)
         i = i + 1
@@ -88,12 +88,12 @@ def threshold(hsv, flag=cv2.THRESH_BINARY):
     cv2.destroyAllWindows()
     return a
 
+
 Diff_H = 'step2\cam4\diff\Diff_H.png'
 Diff_S = 'step2\cam4\diff\Diff_S.png'
 Diff_V = 'step2\cam4\diff\Diff_V.png'
 hsv_images = [Diff_H, Diff_S, Diff_V]
 thresh_V = threshold(hsv_images)
-
 
 '''
 # cam2
