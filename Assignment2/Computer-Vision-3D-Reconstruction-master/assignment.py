@@ -50,10 +50,13 @@ def set_voxel_positions(width, height, depth):
 
     data_zy = []
     data = []
+    width = 10
+    height = 20
+    depth = 10
     for x in range(width):
         for y in range(height):
             for z in range(depth):
-                if random.randint(0, 1000) < 40:
+                if random.randint(0, 1000) < 500:
                     data.append(
                         [(x * block_size - width / 2) * 100, 100 * y * block_size, 100 * (z * block_size - depth / 2)])
                     data_zy.append(
@@ -100,34 +103,34 @@ def set_voxel_positions(width, height, depth):
     for i, p in enumerate(projectedPoints):
 
         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
-            if img[np.int32(p[0][0]), np.int32(p[0][1])] == 255:
+            if img[np.int32(p[0][1]), np.int32(p[0][0])] == 255:
                 points.append(p)
                 indx1.append(i)
 
     for i, p in enumerate(projectedPoints1):
         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
-            if img1[np.int32(p[0][0]), np.int32(p[0][1])] == 255:
+            if img1[np.int32(p[0][1]), np.int32(p[0][0])] == 255:
                 points.append(p)
-                indx.append(i)
+                indx2.append(i)
 
     for i, p in enumerate(projectedPoints2):
         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
-            if img2[np.int32(p[0][0]), np.int32(p[0][1])] == 255:
+            if img2[np.int32(p[0][1]), np.int32(p[0][0])] == 255:
                 points.append(p)
-                indx.append(i)
+                indx3.append(i)
     for i, p in enumerate(projectedPoints3):
         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
-            if img3[np.int32(p[0][0]), np.int32(p[0][1])] == 255:
+            if img3[np.int32(p[0][1]), np.int32(p[0][0])] == 255:
                 points.append(p)
                 indx4.append(i)
 
             # if img[np.int32(p[0][0]), np.int32(p[0][1])] == 0:
             #    indx1.append(i)
-    #indx = np.intersect1d(indx3, indx2)
+    indx = np.intersect1d(indx3, indx2)
     print(len(indx))
-    #indx = np.intersect1d(indx, indx3)
+    indx = np.intersect1d(indx, indx3)
     print(len(indx))
-    #indx = np.intersect1d(indx, indx4)
+    indx = np.intersect1d(indx, indx4)
     data_p = [data[ind] for ind in indx]
     print(data_p)
     for k, dd in enumerate(data_p):
