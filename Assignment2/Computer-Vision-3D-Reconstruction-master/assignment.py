@@ -41,36 +41,39 @@ def set_voxel_positions(width, height, depth):
 
     # 3d points
     objectPoints = []
-    objp = np.float32([[width/2, 0, 0], [0, height, 0], [0, 0, depth/2], [0, 0, 0], [640, 640, 640]]).reshape(-1, 3)
+    objp = np.float32([[width / 2, 0, 0], [0, height, 0], [0, 0, depth / 2], [0, 0, 0], [640, 640, 640]]).reshape(-1, 3)
     objectPoints.append(objp)
     # 2d points
     projectedPoints = []
     projectedPoints0, jac = cv2.projectPoints(np.asarray(objectPoints), rvec_cam1, tvec_cam1, intrinsic_mtx_cam1,
-                                             distCoeffs_cam1)
+                                              distCoeffs_cam1)
 
-    data = projectedPoints
+    data_zy = []
     data = []
     for x in range(width):
         for y in range(height):
             for z in range(depth):
-                if random.randint(0, 1000) < 10:
-                    data.append([(x * block_size - width / 2) * 50, 50 * y * block_size, 50 * (z * block_size - depth / 2)])
+                if random.randint(0, 1000) < 40:
+                    data.append(
+                        [(x * block_size - width / 2) * 100, 100 * y * block_size, 100 * (z * block_size - depth / 2)])
+                    data_zy.append(
+                        [(x * block_size - width / 2) * 100, 100 * (z * block_size - depth / 2), -100 * y * block_size])
 
     # 先projection再循环
     print(np.asarray(data).shape)
-    print("data: ", np.asarray(objectPoints))
+    print("data: ", np.asarray(data))
 
-    projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec_cam1, tvec_cam1, intrinsic_mtx_cam1,
+    projectedPoints, jac = cv2.projectPoints(np.asarray(data_zy), rvec_cam1, tvec_cam1, intrinsic_mtx_cam1,
                                              distCoeffs_cam1)
 
-    projectedPoints1, jac = cv2.projectPoints(np.asarray(data), rvec_cam2, tvec_cam2, intrinsic_mtx_cam2,
-                                             distCoeffs_cam2)
+    projectedPoints1, jac = cv2.projectPoints(np.asarray(data_zy), rvec_cam2, tvec_cam2, intrinsic_mtx_cam2,
+                                              distCoeffs_cam2)
 
-    projectedPoints2, jac = cv2.projectPoints(np.asarray(data), rvec_cam3, tvec_cam3, intrinsic_mtx_cam3,
-                                             distCoeffs_cam3)
+    projectedPoints2, jac = cv2.projectPoints(np.asarray(data_zy), rvec_cam3, tvec_cam3, intrinsic_mtx_cam3,
+                                              distCoeffs_cam3)
 
-    projectedPoints3, jac = cv2.projectPoints(np.asarray(data), rvec_cam4, tvec_cam4, intrinsic_mtx_cam4,
-                                             distCoeffs_cam4)
+    projectedPoints3, jac = cv2.projectPoints(np.asarray(data_zy), rvec_cam4, tvec_cam4, intrinsic_mtx_cam4,
+                                              distCoeffs_cam4)
 
     print(projectedPoints0.shape)
     print(projectedPoints0)
@@ -91,12 +94,15 @@ def set_voxel_positions(width, height, depth):
     points = []
     indx = []
     indx1 = []
+    indx2 = []
+    indx3 = []
+    indx4 = []
     for i, p in enumerate(projectedPoints):
 
         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
             if img[np.int32(p[0][0]), np.int32(p[0][1])] == 255:
                 points.append(p)
-                indx.append(i)
+                indx1.append(i)
 
     for i, p in enumerate(projectedPoints1):
         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
@@ -113,17 +119,21 @@ def set_voxel_positions(width, height, depth):
         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
             if img3[np.int32(p[0][0]), np.int32(p[0][1])] == 255:
                 points.append(p)
-                indx.append(i)
+                indx4.append(i)
 
-            #if img[np.int32(p[0][0]), np.int32(p[0][1])] == 0:
+            # if img[np.int32(p[0][0]), np.int32(p[0][1])] == 0:
             #    indx1.append(i)
-
-    data_p = [data[ind] for ind in indx]
+    #indx = np.intersect1d(indx3, indx2)
     print(len(indx))
-    print(len(indx1))
+    #indx = np.intersect1d(indx, indx3)
+    print(len(indx))
+    #indx = np.intersect1d(indx, indx4)
+    data_p = [data[ind] for ind in indx]
+    print(data_p)
     for k, dd in enumerate(data_p):
-        temp = [d / 50 for d in dd]
+        temp = [d / 100 for d in dd]
         data_p[k] = temp
+    print(data_p)
 
     print(img[554, 624])
     print(img[600, 640])
@@ -146,7 +156,7 @@ def get_cam_positions():
     cams_3d = np.concatenate((cams_3d, np.array(C_cam2.T[0])), axis=0)
     cams_3d = np.concatenate((cams_3d, np.array(C_cam3.T[0])), axis=0)
     cams_3d = np.concatenate((cams_3d, np.array(C_cam4.T[0])), axis=0)
-    cams_3d = cams_3d / 50
+    cams_3d = cams_3d / 100
 
     # exchange y and z coordinates, minus changed y coordinates
     # y1 = -z0, z1 = y0
