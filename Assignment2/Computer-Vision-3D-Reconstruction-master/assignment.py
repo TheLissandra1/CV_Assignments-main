@@ -45,22 +45,21 @@ def set_voxel_positions(width, height, depth):
 
     data_zy = []
     data = []
-    width = 20
-    height = 20
-    depth = 20
+    width = 10
+    height = 14
+    depth = 12
     scale = 100
-    for x in range(width):
-        for y in range(height):
-            for z in range(depth):
-                # if random.randint(0, 1000) < 500:
-                for s in range(5):
-                    data.append(
-                        [scale * (x * block_size - width / 2 + 0.2 * s), scale * (y * block_size + 0.2 * s),
-                         scale * (z * block_size - depth / 2 + 0.2 * s)])
+    # for x in range(width * 5):
+    for x in range(width * 5):
+        for y in range(height * 5):
+            for z in range(depth * 5):
+                data.append(
+                    [scale * (0.2 * x * block_size), scale * (0.2 * y * block_size),
+                     scale * (0.2 * z * block_size - depth / 2)])
 
-                    data_zy.append(
-                        [scale * (x * block_size - width / 2 + 0.2 * s), scale * (z * block_size - depth / 2 + 0.2 * s),
-                         -scale * (y * block_size + 0.2 * s)])
+                data_zy.append(
+                    [scale * (0.2 * x * block_size), scale * (0.2 * z * block_size - depth / 2),
+                     -scale * (0.2 * y * block_size)])
 
     points1, indx1 = get_index(data_zy, "..\step2\cam1\diff\Diff_threshold.png", rvec_cam1, tvec_cam1,
                                intrinsic_cam1, dist_cam1)
