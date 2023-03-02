@@ -21,125 +21,65 @@ def generate_grid(width, depth):
     return data
 
 
+def get_index(data, img_path, rvec, tvec, intrinsic, dist):
+    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    img = cv2.resize(img, [1000, 1000], None, None)
+
+    projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec, tvec, intrinsic, dist)
+    points = []
+    indx = []
+    for i, p in enumerate(projectedPoints):
+        if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
+            if img[np.int32(p[0][1]), np.int32(p[0][0])] == 255:
+                points.append(p)
+                indx.append(i)
+
+    return points, indx
+
+
 def set_voxel_positions(width, height, depth):
-    # Generates random voxel locations
-    # TODO: You need to calculate proper voxel arrays instead of random ones.
-
-    #  create the lookup-table for the valid voxel back-projections onto each of the camera’s FoVs
-    # So, given a position in R3, we need a projection of it in R2.
-    #  Luckily this can be done by the OpenCV function projectPoints. 
-    # The projectPoints-method requires (aside from input and output points) the calibration matrices, 
-    # which have to be saved in data/camX/config.xml:
-    # imgpts, jac = cv2.projectPoints(objectPoints, rVec, tVec, intrisicMat, distCoeffs, projectedPoints)
-
-    # 
-
     rvec_cam1 = cv2.Rodrigues(src=np.asarray(rmtx_cam1))[0]
     rvec_cam2 = cv2.Rodrigues(src=np.asarray(rmtx_cam2))[0]
     rvec_cam3 = cv2.Rodrigues(src=np.asarray(rmtx_cam3))[0]
     rvec_cam4 = cv2.Rodrigues(src=np.asarray(rmtx_cam4))[0]
 
-    # 3d points
-    objectPoints = []
-    objp = np.float32([[width / 2, 0, 0], [0, height, 0], [0, 0, depth / 2], [0, 0, 0], [640, 640, 640]]).reshape(-1, 3)
-    objectPoints.append(objp)
-    # 2d points
-    projectedPoints = []
-    projectedPoints0, jac = cv2.projectPoints(np.asarray(objectPoints), rvec_cam1, tvec_cam1, intrinsic_mtx_cam1,
-                                              distCoeffs_cam1)
-
     data_zy = []
     data = []
-    width = 10
+    width = 20
     height = 20
-    depth = 10
+    depth = 20
+    scale = 100
     for x in range(width):
         for y in range(height):
             for z in range(depth):
-                if random.randint(0, 1000) < 500:
+                # if random.randint(0, 1000) < 500:
+                for s in range(5):
                     data.append(
-                        [(x * block_size - width / 2) * 100, 100 * y * block_size, 100 * (z * block_size - depth / 2)])
+                        [scale * (x * block_size - width / 2 + 0.2 * s), scale * (y * block_size + 0.2 * s),
+                         scale * (z * block_size - depth / 2 + 0.2 * s)])
+
                     data_zy.append(
-                        [(x * block_size - width / 2) * 100, 100 * (z * block_size - depth / 2), -100 * y * block_size])
+                        [scale * (x * block_size - width / 2 + 0.2 * s), scale * (z * block_size - depth / 2 + 0.2 * s),
+                         -scale * (y * block_size + 0.2 * s)])
 
-    # 先projection再循环
-    print(np.asarray(data).shape)
-    print("data: ", np.asarray(data))
+    points1, indx1 = get_index(data_zy, "..\step2\cam1\diff\Diff_threshold.png", rvec_cam1, tvec_cam1,
+                               intrinsic_cam1, dist_cam1)
+    points2, indx2 = get_index(data_zy, "..\step2\cam2\diff\Diff_threshold.png", rvec_cam2, tvec_cam2,
+                               intrinsic_cam2, dist_cam2)
+    points3, indx3 = get_index(data_zy, "..\step2\cam3\diff\Diff_threshold.png", rvec_cam3, tvec_cam3,
+                               intrinsic_cam3, dist_cam3)
+    points4, indx4 = get_index(data_zy, "..\step2\cam4\diff\Diff_threshold.png", rvec_cam4, tvec_cam4,
+                               intrinsic_cam4, dist_cam4)
 
-    projectedPoints, jac = cv2.projectPoints(np.asarray(data_zy), rvec_cam1, tvec_cam1, intrinsic_mtx_cam1,
-                                             distCoeffs_cam1)
-
-    projectedPoints1, jac = cv2.projectPoints(np.asarray(data_zy), rvec_cam2, tvec_cam2, intrinsic_mtx_cam2,
-                                              distCoeffs_cam2)
-
-    projectedPoints2, jac = cv2.projectPoints(np.asarray(data_zy), rvec_cam3, tvec_cam3, intrinsic_mtx_cam3,
-                                              distCoeffs_cam3)
-
-    projectedPoints3, jac = cv2.projectPoints(np.asarray(data_zy), rvec_cam4, tvec_cam4, intrinsic_mtx_cam4,
-                                              distCoeffs_cam4)
-
-    print(projectedPoints0.shape)
-    print(projectedPoints0)
-    print(projectedPoints.shape)
-    print(projectedPoints)
-    img = cv2.imread("..\step2\cam1\diff\Diff_threshold.png", cv2.IMREAD_GRAYSCALE)
-    img = cv2.resize(img, [1000, 1000], None, None)
-
-    img1 = cv2.imread("..\step2\cam2\diff\Diff_threshold.png", cv2.IMREAD_GRAYSCALE)
-    img1 = cv2.resize(img1, [1000, 1000], None, None)
-
-    img2 = cv2.imread("..\step2\cam3\diff\Diff_threshold.png", cv2.IMREAD_GRAYSCALE)
-    img2 = cv2.resize(img2, [1000, 1000], None, None)
-
-    img3 = cv2.imread("..\step2\cam4\diff\Diff_threshold.png", cv2.IMREAD_GRAYSCALE)
-    img3 = cv2.resize(img3, [1000, 1000], None, None)
-
-    points = []
-    indx = []
-    indx1 = []
-    indx2 = []
-    indx3 = []
-    indx4 = []
-    for i, p in enumerate(projectedPoints):
-
-        if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
-            if img[np.int32(p[0][1]), np.int32(p[0][0])] == 255:
-                points.append(p)
-                indx1.append(i)
-
-    for i, p in enumerate(projectedPoints1):
-        if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
-            if img1[np.int32(p[0][1]), np.int32(p[0][0])] == 255:
-                points.append(p)
-                indx2.append(i)
-
-    for i, p in enumerate(projectedPoints2):
-        if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
-            if img2[np.int32(p[0][1]), np.int32(p[0][0])] == 255:
-                points.append(p)
-                indx3.append(i)
-    for i, p in enumerate(projectedPoints3):
-        if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
-            if img3[np.int32(p[0][1]), np.int32(p[0][0])] == 255:
-                points.append(p)
-                indx4.append(i)
-
-            # if img[np.int32(p[0][0]), np.int32(p[0][1])] == 0:
-            #    indx1.append(i)
-    indx = np.intersect1d(indx3, indx2)
-    print(len(indx))
+    indx = np.intersect1d(indx1, indx2)
     indx = np.intersect1d(indx, indx3)
-    print(len(indx))
     indx = np.intersect1d(indx, indx4)
     data_p = [data[ind] for ind in indx]
-    print(data_p)
+    # print(data_p)
     for k, dd in enumerate(data_p):
-        temp = [d / 100 for d in dd]
+        temp = [d / scale for d in dd]
         data_p[k] = temp
-    print(data_p)
 
-    print(img[554, 624])
-    print(img[600, 640])
     return data_p
 
 
@@ -187,13 +127,13 @@ def readCamConfig(xml_path):
     cv_file = cv2.FileStorage(xml_path, cv2.FILE_STORAGE_READ)
 
     intrinsic_mtx = cv_file.getNode("Intrinsic").mat()
-    distortCoeffs = cv_file.getNode('DistortionCoeffs').mat()
+    dist = cv_file.getNode('DistortionCoeffs').mat()
     rmtx = cv_file.getNode('RotationMatrix').mat()
     tvec = cv_file.getNode('TranslationMatrix').mat()
 
     cv_file.release()
     # matrix type: <class 'numpy.ndarray'>
-    return intrinsic_mtx, distortCoeffs, rmtx, tvec
+    return intrinsic_mtx, dist, rmtx, tvec
 
 
 def expandTo4x4(mtx):
@@ -242,7 +182,7 @@ def get_cam_rotation_matrices():
 
 # load cam data from config.xml files:
 # intrinsic matrix, distortionCoefficients, rotation matrix R, translation vector T
-intrinsic_mtx_cam1, distCoeffs_cam1, rmtx_cam1, tvec_cam1 = readCamConfig(config_cam1)
-intrinsic_mtx_cam2, distCoeffs_cam2, rmtx_cam2, tvec_cam2 = readCamConfig(config_cam2)
-intrinsic_mtx_cam3, distCoeffs_cam3, rmtx_cam3, tvec_cam3 = readCamConfig(config_cam3)
-intrinsic_mtx_cam4, distCoeffs_cam4, rmtx_cam4, tvec_cam4 = readCamConfig(config_cam4)
+intrinsic_cam1, dist_cam1, rmtx_cam1, tvec_cam1 = readCamConfig(config_cam1)
+intrinsic_cam2, dist_cam2, rmtx_cam2, tvec_cam2 = readCamConfig(config_cam2)
+intrinsic_cam3, dist_cam3, rmtx_cam3, tvec_cam3 = readCamConfig(config_cam3)
+intrinsic_cam4, dist_cam4, rmtx_cam4, tvec_cam4 = readCamConfig(config_cam4)
