@@ -43,7 +43,7 @@ def auto_threshold(img, step, goal=15000, max_goal=60000, max_thresh=255, flag=c
                 if thresh[i, j] > threshold:
                     thresh[i, j] = 255
 
-        ret, thresh = cv2.threshold(thresh, black + 2, 255, type=cv2.THRESH_TOZERO)
+        ret, thresh = cv2.threshold(thresh, black + 1, 255, type=cv2.THRESH_TOZERO)
         clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(10, 10))
         thresh = clahe.apply(thresh)
 
@@ -52,7 +52,7 @@ def auto_threshold(img, step, goal=15000, max_goal=60000, max_thresh=255, flag=c
                 if thresh[i, j] > threshold:
                     thresh[i, j] = 255
 
-        ret, thresh = cv2.threshold(thresh, black + 4, 255, type=cv2.THRESH_TOZERO)
+        ret, thresh = cv2.threshold(thresh, black + 2, 255, type=cv2.THRESH_TOZERO)
         clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(10, 10))
         thresh = clahe.apply(thresh)
 
@@ -133,14 +133,14 @@ def threshold(hsv):
     cv2.drawContours(a, small_cs, -1, (255, 255, 255), cv2.FILLED, maxLevel=6)
 
     cv2.imshow('Thresholded Image', a)
-    cv2.imwrite("step2\cam2\diff\Diff_threshold.png", a)
+    cv2.imwrite("step2\cam4\diff\Diff_threshold.png", a)
     cv2.destroyAllWindows()
     return a
 
 
-Diff_H = 'step2\cam2\diff\Diff_H.png'
-Diff_S = 'step2\cam2\diff\Diff_S.png'
-Diff_V = 'step2\cam2\diff\Diff_V.png'
+Diff_H = 'step2\cam4\diff\Diff_H.png'
+Diff_S = 'step2\cam4\diff\Diff_S.png'
+Diff_V = 'step2\cam4\diff\Diff_V.png'
 hsv_images = [Diff_H, Diff_S, Diff_V]
 thresh_V = threshold(hsv_images)
 
