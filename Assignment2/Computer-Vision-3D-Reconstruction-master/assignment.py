@@ -14,11 +14,12 @@ config_cam4 = '..\data\cam4\config.xml'
 def generate_grid(width, depth):
     # Generates the floor grid locations
     # You don't need to edit this function
-    data = []
+    data, colors = [], []
     for x in range(width):
         for z in range(depth):
             data.append([x * block_size - width / 2, -block_size, z * block_size - depth / 2])
-    return data
+            colors.append([1.0, 1.0, 1.0] if (x + z) % 2 == 0 else [0, 0, 0])
+    return data, colors
 
 
 def get_index(data, img_path, rvec, tvec, intrinsic, dist):
@@ -44,7 +45,7 @@ def set_voxel_positions(width, height, depth):
     rvec_cam4 = cv2.Rodrigues(src=np.asarray(rmtx_cam4))[0]
 
     data_zy = []
-    data = []
+    data, colors = [], []
     width = 10
     height = 14
     depth = 12
@@ -60,6 +61,7 @@ def set_voxel_positions(width, height, depth):
                 data_zy.append(
                     [scale * (0.2 * x * block_size), scale * (0.2 * z * block_size - depth / 2),
                      -scale * (0.2 * y * block_size)])
+                colors.append([x / width, z / depth, y / height])
 
     points1, indx1 = get_index(data_zy, "..\step2\cam1\diff\Diff_threshold.png", rvec_cam1, tvec_cam1,
                                intrinsic_cam1, dist_cam1)
@@ -74,12 +76,13 @@ def set_voxel_positions(width, height, depth):
     indx = np.intersect1d(indx, indx3)
     indx = np.intersect1d(indx, indx4)
     data_p = [data[ind] for ind in indx]
+    color_p = [colors[ind] for ind in indx]
     # print(data_p)
     for k, dd in enumerate(data_p):
         temp = [d / scale for d in dd]
         data_p[k] = temp
 
-    return data_p
+    return data_p, color_p
 
 
 def get_cam_positions():
@@ -113,7 +116,7 @@ def get_cam_positions():
     #                     [3074.9678, 1106.0835,    412.38507],
     #                     [-2246.4001, 1180.3229,  3075.0542]])/100
 
-    return cams_3d
+    return cams_3d, [[1.0, 0, 0], [0, 1.0, 0], [0, 0, 1.0], [1.0, 1.0, 0]]
 
     # return [[-64 * block_size, 64 * block_size, 63 * block_size],
     #         [63 * block_size, 64 * block_size, 63 * block_size],

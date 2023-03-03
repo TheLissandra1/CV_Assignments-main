@@ -28,61 +28,63 @@ def get_contour(img, min_c, flag=cv2.RETR_EXTERNAL):
     return img, contours, max_contour, small_contours
 
 
-def auto_threshold(img, step, goal=15000, max_goal=60000, max_thresh=255, flag=cv2.THRESH_BINARY):
+# increase contrast and use cv2.threshold to set white and black area
+def get_thresh(img, black_thresh, white_thresh):
+    ret, thresh = cv2.threshold(img, black_thresh, 255, type=cv2.THRESH_TOZERO)
+
+    # increase contrast
+    clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(10, 10))
+    thresh = clahe.apply(thresh)
+
+    for i in range(thresh.shape[0]):
+        for j in range(thresh.shape[1]):
+            if thresh[i, j] > white_thresh:
+                thresh[i, j] = 255
+
+    return thresh
+
+
+def clean_foreground(img, small_contours):
+    # delete white noise area
+    cv2.drawContours(img, small_contours, -1, (0, 0, 0), cv2.FILLED)
+    # fill black holes in foreground
+    img, cos, max_c, small_cs = get_contour((255 - img), 1000, flag=cv2.RETR_TREE)
+    img = (255 - img)
+    cv2.drawContours(img, small_cs, -1, (255, 255, 255), cv2.FILLED, maxLevel=6)
+
+    return img
+
+
+def auto_threshold(img, step, goal=15000, max_goal=60000, max_thresh=255):
     mean, std = cv2.meanStdDev(img)
     black = int(mean + 3)
-    start_thresh = int(mean * 10 + 10)
-    threshold = start_thresh
+    white = int(mean * 10 + 10)
+    temp_thresh = None
     while True:
-        ret, thresh = cv2.threshold(img, black, 255, type=cv2.THRESH_TOZERO)
-        clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(10, 10))
-        thresh = clahe.apply(thresh)
+        thresh = get_thresh(img, black, white)
+        thresh = get_thresh(thresh, black + 1, white)
+        thresh = get_thresh(thresh, black + 2, white)
 
-        for i in range(thresh.shape[0]):
-            for j in range(thresh.shape[1]):
-                if thresh[i, j] > threshold:
-                    thresh[i, j] = 255
-
-        ret, thresh = cv2.threshold(thresh, black + 1, 255, type=cv2.THRESH_TOZERO)
-        clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(10, 10))
-        thresh = clahe.apply(thresh)
-
-        for i in range(thresh.shape[0]):
-            for j in range(thresh.shape[1]):
-                if thresh[i, j] > threshold:
-                    thresh[i, j] = 255
-
-        ret, thresh = cv2.threshold(thresh, black + 2, 255, type=cv2.THRESH_TOZERO)
-        clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(10, 10))
-        thresh = clahe.apply(thresh)
-
-        for i in range(thresh.shape[0]):
-            for j in range(thresh.shape[1]):
-                if thresh[i, j] > threshold:
-                    thresh[i, j] = 255
-
-        ret, thresh = cv2.threshold(thresh, 0, 255, type=cv2.THRESH_OTSU)
+        ret, thresh = cv2.threshold(thresh, 0, max_thresh, type=cv2.THRESH_OTSU)
 
         im, contours, max_contour, small_contours = get_contour(thresh, 2000)
 
         max_area = cv2.contourArea(max_contour)
         if max_area >= goal:
             if max_area >= max_goal:
-                threshold = threshold + step
-                ret, thresh = cv2.threshold(img, threshold, max_thresh, type=flag)
+                if temp_thresh is None:
+                    temp_thresh = thresh
+                white = white + step
+                thresh = temp_thresh
                 im, contours, max_contour, small_contours = get_contour(thresh, 2000)
-            # cv2.drawContours(im, small_contours, -1, (0, 0, 0), cv2.FILLED)
-            # cv2.drawContours(im, [max_contour], -1, (255, 255, 255), cv2.FILLED)
-            cv2.drawContours(im, small_contours, -1, (0, 0, 0), cv2.FILLED)
 
-            im, cos, max_c, small_cs = get_contour((255 - im), 1000, flag=cv2.RETR_TREE)
-            im = (255 - im)
-            cv2.drawContours(im, small_cs, -1, (255, 255, 255), cv2.FILLED, maxLevel=6)
+            im = clean_foreground(im, small_contours)
             break
         else:
-            threshold = threshold - step
+            white = white - step
+            temp_thresh = thresh
 
-    return im, threshold
+    return im, white
 
 
 def threshold(hsv):
@@ -94,12 +96,6 @@ def threshold(hsv):
         # load input image in grayscale
         img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
         img = cv2.resize(img, [1000, 1000])
-
-        # increase contrast
-        # ret, contrast = cv2.threshold(img, 10, 255, type=cv2.THRESH_TOZERO)
-        # clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(10, 10))
-        # cl1 = clahe.apply(contrast)
-        blurred = cv2.GaussianBlur(img, (9, 9), 0.8, 0.8)
 
         thresh, t = auto_threshold(img, 1)
         print(t)
@@ -117,25 +113,21 @@ def threshold(hsv):
     t2 = cv2.bitwise_and(outputs[0], outputs[2])
     t3 = cv2.bitwise_and(outputs[1], outputs[2])
 
-    a = cv2.bitwise_or(t1, t2)
-    a = cv2.bitwise_or(a, t3)
+    result = cv2.bitwise_or(t1, t2)
+    result = cv2.bitwise_or(result, t3)
 
     # apply morphology open then close
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    a = cv2.morphologyEx(a, cv2.MORPH_CLOSE, kernel, iterations=3)
-    a = cv2.morphologyEx(a, cv2.MORPH_OPEN, kernel, iterations=2)
+    result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel, iterations=3)
+    result = cv2.morphologyEx(result, cv2.MORPH_OPEN, kernel, iterations=2)
 
-    a, cos, max_c, small_cs = get_contour(a, 6000)
-    cv2.drawContours(a, small_cs, -1, (0, 0, 0), cv2.FILLED)
-    a, cos, max_c, small_cs = get_contour((255 - a), 1000, flag=cv2.RETR_TREE)
-    a = (255 - a)
+    result, cos, max_c, small_cs = get_contour(result, 6000)
+    result = clean_foreground(result, small_cs)
 
-    cv2.drawContours(a, small_cs, -1, (255, 255, 255), cv2.FILLED, maxLevel=6)
-
-    cv2.imshow('Thresholded Image', a)
-    cv2.imwrite("step2\cam4\diff\Diff_threshold.png", a)
+    cv2.imshow('Thresholded Image', result)
+    cv2.imwrite("step2\cam4\diff\Diff_threshold.png", result)
     cv2.destroyAllWindows()
-    return a
+    return result
 
 
 Diff_H = 'step2\cam4\diff\Diff_H.png'
