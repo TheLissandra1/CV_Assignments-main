@@ -48,7 +48,7 @@ def clean_foreground(img, small_contours):
     # delete white noise area
     cv2.drawContours(img, small_contours, -1, (0, 0, 0), cv2.FILLED)
     # fill black holes in foreground
-    img, cos, max_c, small_cs = get_contour((255 - img), 1000, flag=cv2.RETR_TREE)
+    img, cos, max_c, small_cs = get_contour((255 - img), 500, flag=cv2.RETR_TREE)
     img = (255 - img)
     cv2.drawContours(img, small_cs, -1, (255, 255, 255), cv2.FILLED, maxLevel=6)
 
@@ -58,7 +58,7 @@ def clean_foreground(img, small_contours):
 def auto_threshold(img, step, goal=15000, max_goal=60000, max_thresh=255):
     mean, std = cv2.meanStdDev(img)
     black = int(mean + 3)
-    white = int(mean * 10 + 10)
+    white = int(mean * 10 + 15)
     temp_thresh = None
     while True:
         thresh = get_thresh(img, black, white)
@@ -121,18 +121,18 @@ def threshold(hsv):
     result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel, iterations=3)
     result = cv2.morphologyEx(result, cv2.MORPH_OPEN, kernel, iterations=2)
 
-    result, cos, max_c, small_cs = get_contour(result, 6000)
+    result, cos, max_c, small_cs = get_contour(result, 8000)
     result = clean_foreground(result, small_cs)
 
     cv2.imshow('Thresholded Image', result)
-    cv2.imwrite("step2\cam4\diff\Diff_threshold.png", result)
+    cv2.imwrite("step2\cam1\diff\Diff_threshold.png", result)
     cv2.destroyAllWindows()
     return result
 
 
-Diff_H = 'step2\cam4\diff\Diff_H.png'
-Diff_S = 'step2\cam4\diff\Diff_S.png'
-Diff_V = 'step2\cam4\diff\Diff_V.png'
+Diff_H = 'step2\cam1\diff\Diff_H.png'
+Diff_S = 'step2\cam1\diff\Diff_S.png'
+Diff_V = 'step2\cam1\diff\Diff_V.png'
 hsv_images = [Diff_H, Diff_S, Diff_V]
 thresh_V = threshold(hsv_images)
 
