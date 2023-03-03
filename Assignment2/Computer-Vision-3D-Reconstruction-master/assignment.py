@@ -22,20 +22,27 @@ def generate_grid(width, depth):
     return data, colors
 
 
-def get_index(data, img_path, rvec, tvec, intrinsic, dist):
+def get_index(data, img_path, color_path, rvec, tvec, intrinsic, dist):
     img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-    img = cv2.resize(img, [1000, 1000], None, None)
+    img = cv2.resize(img, [1000, 1000])
+
+    color = cv2.imread(color_path, cv2.IMREAD_COLOR)
+    color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
+    color = cv2.resize(color, [1000, 1000])
 
     projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec, tvec, intrinsic, dist)
     points = []
     indx = []
+    colors = []
     for i, p in enumerate(projectedPoints):
         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
             if img[np.int32(p[0][1]), np.int32(p[0][0])] == 255:
                 points.append(p)
                 indx.append(i)
-
-    return points, indx
+            colors.append(color[np.int32(p[0][1]), np.int32(p[0][0])])
+        else:
+            colors.append([0, 0, 0])
+    return points, indx, colors
 
 
 def set_voxel_positions(width, height, depth):
@@ -44,8 +51,7 @@ def set_voxel_positions(width, height, depth):
     rvec_cam3 = cv2.Rodrigues(src=np.asarray(rmtx_cam3))[0]
     rvec_cam4 = cv2.Rodrigues(src=np.asarray(rmtx_cam4))[0]
 
-    data_zy = []
-    data, colors = [], []
+    data, data_zy = [], []
     width = 10
     height = 14
     depth = 12
@@ -61,26 +67,32 @@ def set_voxel_positions(width, height, depth):
                 data_zy.append(
                     [scale * (0.2 * x * block_size), scale * (0.2 * z * block_size - depth / 2),
                      -scale * (0.2 * y * block_size)])
-                colors.append([x / width, z / depth, y / height])
 
-    points1, indx1 = get_index(data_zy, "..\step2\cam1\diff\Diff_threshold.png", rvec_cam1, tvec_cam1,
-                               intrinsic_cam1, dist_cam1)
-    points2, indx2 = get_index(data_zy, "..\step2\cam2\diff\Diff_threshold.png", rvec_cam2, tvec_cam2,
-                               intrinsic_cam2, dist_cam2)
-    points3, indx3 = get_index(data_zy, "..\step2\cam3\diff\Diff_threshold.png", rvec_cam3, tvec_cam3,
-                               intrinsic_cam3, dist_cam3)
-    points4, indx4 = get_index(data_zy, "..\step2\cam4\diff\Diff_threshold.png", rvec_cam4, tvec_cam4,
-                               intrinsic_cam4, dist_cam4)
+    points1, indx1, color1 = get_index(data_zy, "..\step2\cam1\diff\Diff_threshold.png", "..\step2\cam1\cam1_video.png",
+                                       rvec_cam1, tvec_cam1, intrinsic_cam1, dist_cam1)
+    points2, indx2, color2 = get_index(data_zy, "..\step2\cam2\diff\Diff_threshold.png", "..\step2\cam2\cam2_video.png",
+                                       rvec_cam2, tvec_cam2, intrinsic_cam2, dist_cam2)
+    points3, indx3, color3 = get_index(data_zy, "..\step2\cam3\diff\Diff_threshold.png", "..\step2\cam3\cam3_video.png",
+                                       rvec_cam3, tvec_cam3, intrinsic_cam3, dist_cam3)
+    points4, indx4, color4 = get_index(data_zy, "..\step2\cam4\diff\Diff_threshold.png", "..\step2\cam4\cam4_video.png",
+                                       rvec_cam4, tvec_cam4, intrinsic_cam4, dist_cam4)
+
+    colors = np.mean([color1, color2, color3, color4], axis=0)
 
     indx = np.intersect1d(indx1, indx2)
     indx = np.intersect1d(indx, indx3)
     indx = np.intersect1d(indx, indx4)
+
     data_p = [data[ind] for ind in indx]
     color_p = [colors[ind] for ind in indx]
-    # print(data_p)
-    for k, dd in enumerate(data_p):
+
+    for i, dd in enumerate(data_p):
         temp = [d / scale for d in dd]
-        data_p[k] = temp
+        data_p[i] = temp
+
+    for i, cc in enumerate(color_p):
+        temp = [c / 255 for c in cc]
+        color_p[i] = temp
 
     return data_p, color_p
 
