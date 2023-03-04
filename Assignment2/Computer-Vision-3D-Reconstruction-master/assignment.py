@@ -2,6 +2,10 @@ import glm
 import random
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+from skimage import measure
 
 block_size = 1.0
 # data\camX\config.xml file paths
@@ -56,17 +60,16 @@ def set_voxel_positions(width, height, depth):
     height = 14
     depth = 12
     scale = 100
-    # for x in range(width * 5):
-    for x in range(width * 5):
-        for y in range(height * 5):
-            for z in range(depth * 5):
+    for x in range(width * 4):
+        for y in range(height * 4):
+            for z in range(depth * 4):
                 data.append(
-                    [scale * (0.2 * x * block_size), scale * (0.2 * y * block_size),
-                     scale * (0.2 * z * block_size - depth / 2)])
+                    [scale * (0.25 * x * block_size), scale * (0.25 * y * block_size),
+                     scale * (0.25 * z * block_size - depth / 2)])
 
                 data_zy.append(
-                    [scale * (0.2 * x * block_size), scale * (0.2 * z * block_size - depth / 2),
-                     -scale * (0.2 * y * block_size)])
+                    [scale * (0.25 * x * block_size), scale * (0.25 * z * block_size - depth / 2),
+                     -scale * (0.25 * y * block_size)])
 
     points1, indx1, color1 = get_index(data_zy, "..\step2\cam1\diff\Diff_threshold.png", "..\step2\cam1\cam1_video.png",
                                        rvec_cam1, tvec_cam1, intrinsic_cam1, dist_cam1)
@@ -93,6 +96,48 @@ def set_voxel_positions(width, height, depth):
     for i, cc in enumerate(color_p):
         temp = [c / 255 for c in cc]
         color_p[i] = temp
+
+    voxels = np.asarray(data_p)
+    ux = np.unique(voxels[:, 0])
+    uy = np.unique(voxels[:, 1])
+    uz = np.unique(voxels[:, 2])
+
+    # create a meshgrid
+    X, Y, Z = np.meshgrid(uy, ux, uz)
+    v = np.zeros(X.shape)
+    n = voxels.shape[0]
+    for i in range(n):
+        ix = ux == voxels[i, 0]
+        iy = uy == voxels[i, 1]
+        iz = uz == voxels[i, 2]
+        v[ix, iy, iz] = 1
+
+    # Use marching cubes to obtain the surface mesh
+    verts, faces, normals, values = measure.marching_cubes(v)
+
+    # Display resulting triangular mesh using Matplotlib
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(projection='3d')
+    ax.view_init(elev=22, azim=20, roll=97.5)  # right
+    # ax.view_init(elev=30, azim=25, roll=102.5)  # right
+    # ax.view_init(elev=28, azim=165, roll=-97)  # left
+    # ax.view_init(elev=65, azim=120, roll=-148.5)  # front
+
+    # `verts[faces]` to generate a collection of triangles
+    mesh = Poly3DCollection(verts[faces])
+    mesh.set_edgecolor('k')
+    ax.add_collection3d(mesh)
+
+    ax.set_xlabel("x-axis")
+    ax.set_ylabel("y-axis")
+    ax.set_zlabel("z-axis")
+
+    ax.set_xlim(-10, 40)
+    ax.set_ylim(0, 50)
+    ax.set_zlim(-15, 35)
+    plt.tight_layout()
+    plt.show()
+    fig.savefig("mesh2.pdf")
 
     return data_p, color_p
 
