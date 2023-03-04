@@ -137,7 +137,7 @@ def set_voxel_positions(width, height, depth):
     ax.set_zlim(-15, 35)
     plt.tight_layout()
     plt.show()
-    fig.savefig("mesh2.pdf")
+    fig.savefig("mesh.pdf")
 
     return data_p, color_p
 

@@ -1,27 +1,39 @@
 # CV_Assignments
 
-## Assignment 1
-#### Camera_Calibration.py:
-Basic code of camera calibration. Load all images in the directory and do cv2.drawChessboardCorners. Store the camera matrix.   
+## Assignment 2
 #### GUI.py: 
-The user interface.
-The user can load one original image of the chessboard and the detected corners will be shown on the result image.
+The user interface in Assignment 1.
 
-If the corners cannot be detected automatically, the user can select 4 corners on the largest rectangle and generate the rest corners. 
-The image with generated corners will be displayed on the user interface.
+Add the "get extrinsic" button.
 
-The user can also load multiple images, including images which need manually annotation, to get the camera matrix.
+After the user can load multiple images to get the camera intrinsic matrix, the user can click "get extrinsic" to load the checkerboard image.
+
+The user can use the manually click to choose the original point and get the extrinsic matrix.
 #### drawCube.py:
-Load all images in the directory and load camera data file. Draw cube and axes on the images.
-
-#### Webcam.py:
-Open the webcam and draw cube on the chessboard plane in real-time.
+File created in Assignment 1. Used to draw world axis on the board.
 
 #### CameraData directory:
-The camera data for three run.
-Run 1: camera_Data.npz
-Run 2: camera_Data_10.npz
-Run 3: camera_Data_5.npz
+The camera data of 4 camera.
+
+#### averageFrame.py:
+Average frame of background.avi
+
+#### computeImgDiff.py:
+Get difference images.
+
+#### hsv.py:
+Get images in H, S, and V channels.
+
+#### thresholding.py:
+Do background subtraction.
+
+#### assignment.py:
+The task 3: voxel reconstruction.
+
+We also changed the size of voxel in the cube.json. 
+The original half edge length of voxel is 0.5. We changed it to 0.12 (around one quarter).
+
+
 
 
 
