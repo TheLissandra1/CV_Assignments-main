@@ -37,6 +37,7 @@ Do background subtraction.
 
 #### assignment.py:
 The task 3: voxel reconstruction.
+Choice task: coloring and surface mesh
 
 We also changed the size of voxel in the cube.json. 
 The original half edge length of voxel is 0.5. We changed it to 0.12 (around one quarter).
