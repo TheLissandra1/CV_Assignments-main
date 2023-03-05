@@ -13,7 +13,15 @@ The user can use the manually click to choose the original point and get the ext
 File created in Assignment 1. Used to draw world axis on the board.
 
 #### CameraData directory:
-The camera data of 4 camera.
+The camera data of 4 camera are stored in 4 config.xml files.
+
+data\cam1\config.xml
+
+data\cam2\config.xml
+
+data\cam3\config.xml
+
+data\cam4\config.xml
 
 #### averageFrame.py:
 Average frame of background.avi
