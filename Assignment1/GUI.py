@@ -65,7 +65,7 @@ class MyWindow(QtWidgets.QMainWindow):
         # QPushButton to get extrinsic matrix
         self.ex_button = QtWidgets.QPushButton('Get extrinsic matrix')
         self.ex_button.clicked.connect(self.get_extrinsic)
-        self.ex_button.setEnabled(True)
+        self.ex_button.setEnabled(False)
 
         # QLabel to present the loaded image
         self.image_label = QtWidgets.QLabel()
@@ -350,7 +350,7 @@ class MyWindow(QtWidgets.QMainWindow):
                 # save extrinsic matrix
                 cam_path, cam_name = os.path.split(self.saved_path)
                 txt_name, _ = os.path.splitext(cam_name)
-                cam_path = "../Assignment3/step1/CameraData/cam4"
+                # cam_path = "../Assignment3/step1/CameraData/cam4"
                 save_path = cam_path + "/Extrinsic_" + txt_name
                 img_path = cam_path + "/line_" + txt_name + ".png"
                 cv2.imwrite(img_path, img_line)
