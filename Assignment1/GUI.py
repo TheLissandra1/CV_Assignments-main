@@ -65,7 +65,7 @@ class MyWindow(QtWidgets.QMainWindow):
         # QPushButton to get extrinsic matrix
         self.ex_button = QtWidgets.QPushButton('Get extrinsic matrix')
         self.ex_button.clicked.connect(self.get_extrinsic)
-        self.ex_button.setEnabled(False)
+        self.ex_button.setEnabled(True)
 
         # QLabel to present the loaded image
         self.image_label = QtWidgets.QLabel()
@@ -282,7 +282,7 @@ class MyWindow(QtWidgets.QMainWindow):
             self.result_label.setText("Please enter integer in the size of the chessboard")
 
     def get_extrinsic(self):
-        # self.saved_path = "CameraData/cam1/camera_Data_cam_1.npz"
+        self.saved_path = "CameraData/cam1/camera_Data_cam_1.npz"
         if len(self.width.text()) == 0 or len(self.height.text()) == 0:
             self.result_label.setText("Please enter the size of the chessboard")
 
@@ -309,14 +309,9 @@ class MyWindow(QtWidgets.QMainWindow):
                 ret, corners = cv2.findChessboardCorners(gray, (a, b), cv2.CALIB_CB_ADAPTIVE_THRESH
                                                          + cv2.CALIB_CB_NORMALIZE_IMAGE
                                                          + cv2.CALIB_CB_FAST_CHECK)
-                print(ret)
 
-                if ret:
-                    flag_draw = True
-
-                else:
-                    self.show_image("source")
-                    corners, flag_draw = self.manually_draw(a, b, gray)
+                self.show_image("source")
+                corners, flag_draw = self.manually_draw(a, b, gray)
 
                 if flag_draw:
                     corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), self.criteria)
@@ -355,6 +350,7 @@ class MyWindow(QtWidgets.QMainWindow):
                 # save extrinsic matrix
                 cam_path, cam_name = os.path.split(self.saved_path)
                 txt_name, _ = os.path.splitext(cam_name)
+                cam_path = "../Assignment3/step1/CameraData/cam4"
                 save_path = cam_path + "/Extrinsic_" + txt_name
                 img_path = cam_path + "/line_" + txt_name + ".png"
                 cv2.imwrite(img_path, img_line)
