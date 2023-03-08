@@ -45,10 +45,10 @@ background_img_path = '..\Assignment3\step1\Diff\cam1\hsv\hsv_cam1_background.pn
 background_img_path_H = '..\Assignment3\step1\Diff\cam1\hsv\channel0_cam1_background.png'
 background_img_path_S = '..\Assignment3\step1\Diff\cam1\hsv\channel1_cam1_background.png'
 background_img_path_V = '..\Assignment3\step1\Diff\cam1\hsv\channel2_cam1_background.png'
-foreground_img_path = '..\Assignment3\step1\Diff\cam1\hsv\hsv_cam1_frame.jpg'
-foreground_img_path_H = '..\Assignment3\step1\Diff\cam1\hsv\channel0_cam1_frame.jpg'
-foreground_img_path_S = '..\Assignment3\step1\Diff\cam1\hsv\channel1_cam1_frame.jpg'
-foreground_img_path_V = '..\Assignment3\step1\Diff\cam1\hsv\channel2_cam1_frame.jpg'
+foreground_img_path = '..\Assignment3\step1\Diff\cam1\hsv\hsv_cam1_frame.png'
+foreground_img_path_H = '..\Assignment3\step1\Diff\cam1\hsv\channel0_cam1_frame.png'
+foreground_img_path_S = '..\Assignment3\step1\Diff\cam1\hsv\channel1_cam1_frame.png'
+foreground_img_path_V = '..\Assignment3\step1\Diff\cam1\hsv\channel2_cam1_frame.png'
 
 path_list = [root, background_img_path, background_img_path_H, background_img_path_S, background_img_path_V,
              foreground_img_path, foreground_img_path_H, foreground_img_path_S, foreground_img_path_V]

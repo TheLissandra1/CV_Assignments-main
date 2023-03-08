@@ -21,7 +21,7 @@ def get_thresh(img, black_thresh, white_thresh):
 def get_contour(img, min_c, flag=cv2.RETR_EXTERNAL):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2, 2))
     img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
-    img = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
+    #img = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
 
     # Get contours
     contours = cv2.findContours(img, flag, cv2.CHAIN_APPROX_SIMPLE)
@@ -45,16 +45,16 @@ def clean_foreground(img, small_contours):
     # delete white noise area
     cv2.drawContours(img, small_contours, -1, (0, 0, 0), cv2.FILLED)
     # fill black holes in foreground
-    img, cos, max_c, small_cs = get_contour((255 - img), 500, flag=cv2.RETR_TREE)
+    img, cos, max_c, small_cs = get_contour((255 - img), 5000, flag=cv2.RETR_TREE)
     img = (255 - img)
     cv2.drawContours(img, small_cs, -1, (255, 255, 255), cv2.FILLED, maxLevel=6)
 
     return img
 
 
-def auto_threshold(img, step, goal=15000, max_goal=60000, max_thresh=255):
+def auto_threshold(img, step, goal=15000, max_goal=80000, max_thresh=255, b=1):
     mean, std = cv2.meanStdDev(img)
-    black = int(mean)
+    black = int(mean + b)
     white = int(mean * 10 + 20)
     temp_thresh = None
     while True:
@@ -95,7 +95,12 @@ def threshold(hsv):
         img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
         img = cv2.resize(img, [1000, 1000])
 
-        thresh, t = auto_threshold(img, 1)
+        if i == 2:
+            thresh, t = auto_threshold(img, 1, b=0)
+        elif i == 0:
+            thresh, t = auto_threshold(img, 1, b=0)
+        else:
+            thresh, t = auto_threshold(img, 1, b=0)
         print(t)
 
         # display thresholded image
@@ -117,20 +122,21 @@ def threshold(hsv):
     # post-processing
     # apply morphology open then close
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel, iterations=2)
-    result = cv2.morphologyEx(result, cv2.MORPH_OPEN, kernel, iterations=1)
+    result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel, iterations=5)
+    result = cv2.morphologyEx(result, cv2.MORPH_OPEN, kernel, iterations=2)
 
     result, cos, max_c, small_cs = get_contour(result, 100)
     result = clean_foreground(result, small_cs)
 
     cv2.imshow('Thresholded Image', result)
-    cv2.imwrite("..\Assignment3\step1\Diff\cam2\diff\Diff_threshold.png", result)
+    cv2.imwrite("..\Assignment3\step1\Diff\cam4\diff\Diff_threshold.png", result)
     cv2.destroyAllWindows()
     return result
 
 
-Diff_H = '..\Assignment3\step1\Diff\cam2\diff\Diff_H.png'
-Diff_S = '..\Assignment3\step1\Diff\cam2\diff\Diff_S.png'
-Diff_V = '..\Assignment3\step1\Diff\cam2\diff\Diff_V.png'
+Diff_H = '..\Assignment3\step1\Diff\cam4\diff\Diff_H.png'
+Diff_S = '..\Assignment3\step1\Diff\cam4\diff\Diff_S.png'
+Diff_V = '..\Assignment3\step1\Diff\cam4\diff\Diff_V.png'
+
 hsv_images = [Diff_H, Diff_S, Diff_V]
 thresh_V = threshold(hsv_images)
