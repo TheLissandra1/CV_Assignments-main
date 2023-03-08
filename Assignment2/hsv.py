@@ -63,7 +63,7 @@ def image_extract(root):
 
 
 if __name__ == '__main__':
-    image_extract("step2\cam1")
-    image_extract("step2\cam2")
-    image_extract("step2\cam3")
-    image_extract("step2\cam4")
+    image_extract("..\Assignment3\step1\Diff\cam1")
+    image_extract("..\Assignment3\step1\Diff\cam2")
+    image_extract("..\Assignment3\step1\Diff\cam3")
+    image_extract("..\Assignment3\step1\Diff\cam4")

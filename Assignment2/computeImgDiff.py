@@ -40,15 +40,15 @@ def compute_AllDiff(path_list):
 
 
 # replace cam1 to cam2, cam3, cam4
-root = 'step2\cam1'
-background_img_path = 'step2\cam1\hsv\hsv_cam1_background_Avg.png'
-background_img_path_H = 'step2\cam1\hsv\channel0_cam1_background_Avg.png'
-background_img_path_S = 'step2\cam1\hsv\channel1_cam1_background_Avg.png'
-background_img_path_V = 'step2\cam1\hsv\channel2_cam1_background_Avg.png'
-foreground_img_path = 'step2\cam1\hsv\hsv_cam1_video.png'
-foreground_img_path_H = 'step2\cam1\hsv\channel0_cam1_video.png'
-foreground_img_path_S = 'step2\cam1\hsv\channel1_cam1_video.png'
-foreground_img_path_V = 'step2\cam1\hsv\channel2_cam1_video.png'
+root = '..\Assignment3\step1\Diff\cam1'
+background_img_path = '..\Assignment3\step1\Diff\cam1\hsv\hsv_cam1_background.png'
+background_img_path_H = '..\Assignment3\step1\Diff\cam1\hsv\channel0_cam1_background.png'
+background_img_path_S = '..\Assignment3\step1\Diff\cam1\hsv\channel1_cam1_background.png'
+background_img_path_V = '..\Assignment3\step1\Diff\cam1\hsv\channel2_cam1_background.png'
+foreground_img_path = '..\Assignment3\step1\Diff\cam1\hsv\hsv_cam1_frame.jpg'
+foreground_img_path_H = '..\Assignment3\step1\Diff\cam1\hsv\channel0_cam1_frame.jpg'
+foreground_img_path_S = '..\Assignment3\step1\Diff\cam1\hsv\channel1_cam1_frame.jpg'
+foreground_img_path_V = '..\Assignment3\step1\Diff\cam1\hsv\channel2_cam1_frame.jpg'
 
 path_list = [root, background_img_path, background_img_path_H, background_img_path_S, background_img_path_V,
              foreground_img_path, foreground_img_path_H, foreground_img_path_S, foreground_img_path_V]
@@ -62,15 +62,3 @@ compute_AllDiff(path_list)
 path_list = replaceStrs(path_list, 'cam3', 'cam4')
 compute_AllDiff(path_list)
 
-'''
-# replace cam1 to cam2, cam3, cam4
-root = 'Assignment2\step2\cam1\hsv'
-background_img_path = 'Assignment2\step2\cam1\hsv\hsv_cam1_background_Avg.png'
-background_img_path_H = 'Assignment2\step2\cam1\hsv\channel0_cam1_background_Avg.png'
-background_img_path_S = 'Assignment2\step2\cam1\hsv\channel1_cam1_background_Avg.png'
-background_img_path_V = 'Assignment2\step2\cam1\hsv\channel2_cam1_background_Avg.png'
-foreground_img_path = 'Assignment2\step2\cam1\hsv\hsv_cam1_video.png'
-foreground_img_path_H = 'Assignment2\step2\cam1\hsv\channel0_cam1_video.png'
-foreground_img_path_S = 'Assignment2\step2\cam1\hsv\channel1_cam1_video.png'
-foreground_img_path_V = 'Assignment2\step2\cam1\hsv\channel2_cam1_video.png'
-'''

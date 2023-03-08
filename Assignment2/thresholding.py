@@ -54,17 +54,17 @@ def clean_foreground(img, small_contours):
 
 def auto_threshold(img, step, goal=15000, max_goal=60000, max_thresh=255):
     mean, std = cv2.meanStdDev(img)
-    black = int(mean + 3)
-    white = int(mean * 10 + 15)
+    black = int(mean)
+    white = int(mean * 10 + 20)
     temp_thresh = None
     while True:
         thresh = get_thresh(img, black, white)
+        thresh = get_thresh(thresh, black, white)
         thresh = get_thresh(thresh, black + 1, white)
-        thresh = get_thresh(thresh, black + 2, white)
         # binarization
         ret, thresh = cv2.threshold(thresh, 0, max_thresh, type=cv2.THRESH_OTSU)
 
-        im, contours, max_contour, small_contours = get_contour(thresh, 2000)
+        im, contours, max_contour, small_contours = get_contour(thresh, 20)
 
         max_area = cv2.contourArea(max_contour)
         if max_area >= goal:
@@ -73,7 +73,7 @@ def auto_threshold(img, step, goal=15000, max_goal=60000, max_thresh=255):
                     temp_thresh = thresh
                 white = white + step
                 thresh = temp_thresh
-                im, contours, max_contour, small_contours = get_contour(thresh, 2000)
+                im, contours, max_contour, small_contours = get_contour(thresh, 20)
 
             # post-processing
             im = clean_foreground(im, small_contours)
@@ -117,20 +117,20 @@ def threshold(hsv):
     # post-processing
     # apply morphology open then close
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel, iterations=3)
-    result = cv2.morphologyEx(result, cv2.MORPH_OPEN, kernel, iterations=2)
+    result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel, iterations=2)
+    result = cv2.morphologyEx(result, cv2.MORPH_OPEN, kernel, iterations=1)
 
-    result, cos, max_c, small_cs = get_contour(result, 8000)
+    result, cos, max_c, small_cs = get_contour(result, 100)
     result = clean_foreground(result, small_cs)
 
     cv2.imshow('Thresholded Image', result)
-    cv2.imwrite("step2\cam1\diff\Diff_threshold.png", result)
+    cv2.imwrite("..\Assignment3\step1\Diff\cam2\diff\Diff_threshold.png", result)
     cv2.destroyAllWindows()
     return result
 
 
-Diff_H = 'step2\cam1\diff\Diff_H.png'
-Diff_S = 'step2\cam1\diff\Diff_S.png'
-Diff_V = 'step2\cam1\diff\Diff_V.png'
+Diff_H = '..\Assignment3\step1\Diff\cam2\diff\Diff_H.png'
+Diff_S = '..\Assignment3\step1\Diff\cam2\diff\Diff_S.png'
+Diff_V = '..\Assignment3\step1\Diff\cam2\diff\Diff_V.png'
 hsv_images = [Diff_H, Diff_S, Diff_V]
 thresh_V = threshold(hsv_images)

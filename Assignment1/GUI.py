@@ -273,7 +273,7 @@ class MyWindow(QtWidgets.QMainWindow):
             self.result_label.setText("Camera matrix:\n" + str(mtx))
 
             # Save camera parameters
-            camera_data_fname = "CameraData/cam4/camera_Data_cam_4.npz"
+            camera_data_fname = "Diff/cam4/camera_Data_cam_4.npz"
             np.savez(camera_data_fname, mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
             self.saved_path = camera_data_fname
             self.ex_button.setEnabled(True)
@@ -350,7 +350,7 @@ class MyWindow(QtWidgets.QMainWindow):
                 # save extrinsic matrix
                 cam_path, cam_name = os.path.split(self.saved_path)
                 txt_name, _ = os.path.splitext(cam_name)
-                # cam_path = "../Assignment3/step1/CameraData/cam4"
+                # cam_path = "../Assignment3/step1/Diff/cam4"
                 save_path = cam_path + "/Extrinsic_" + txt_name
                 img_path = cam_path + "/line_" + txt_name + ".png"
                 cv2.imwrite(img_path, img_line)
