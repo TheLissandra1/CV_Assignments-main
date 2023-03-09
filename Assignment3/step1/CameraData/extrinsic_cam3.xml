@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<!--Cam3 Data-->
+<RotationMatrix>
+    <rows>3</rows>
+    <cols>3</cols>
+    <dt>f</dt>
+    <data>
+        0.10413039  0.99435845  0.0202024
+        -0.2753096   0.00929978  0.96131064
+        0.95569948 -0.10566356  0.27472481
+    </data>
+</RotationMatrix>
+<TranslationVector type_id="opencv-matrix">
+  <rows>3</rows>
+  <cols>1</cols>
+  <dt>f</dt>
+  <data>
+    481.45935431  
+    957.84867084 
+    2544.23921474
+  </data>
+  </TranslationVector>
+</opencv_storage>

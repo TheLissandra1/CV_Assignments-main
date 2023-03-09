@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<!--Cam4 Data-->
+<RotationMatrix>
+    <rows>3</rows>
+    <cols>3</cols>
+    <dt>f</dt>
+    <data>
+        0.57886841  0.81537532  0.00862827
+        -0.22804354  0.15172019  0.96175731
+        0.78288409 -0.55869855  0.2737671
+    </data>
+</RotationMatrix>
+<TranslationVector type_id="opencv-matrix">
+  <rows>3</rows>
+  <cols>1</cols>
+  <dt>f</dt>
+  <data>
+    -643.51072351  
+    811.2680524  
+    3492.20459073
+  </data>
+  </TranslationVector>
+</opencv_storage>
