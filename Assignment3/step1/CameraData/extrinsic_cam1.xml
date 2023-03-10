@@ -1,6 +1,28 @@
 <?xml version="1.0"?>
 <opencv_storage>
 <!--Cam1 Data-->
+<Intrinsic type_id="opencv-matrix">
+  <rows>3</rows>
+  <cols>3</cols>
+  <dt>f</dt>
+  <data>
+    697.92021509 0. 524.31251576
+    0. 1022.25387463 466.10031462
+    0. 0. 1.
+  </data>
+</Intrinsic>
+<DistortionCoeffs type_id="opencv-matrix">
+  <rows>5</rows>
+  <cols>1</cols>
+  <dt>f</dt>
+  <data>
+    -0.37312051
+    0.23206456
+    0.000333
+    0.00002568
+    -0.10193919
+  </data>
+</DistortionCoeffs>
 <RotationMatrix>
     <rows>3</rows>
     <cols>3</cols>
@@ -11,14 +33,14 @@
         -0.70847152 -0.65354229  0.26636548
     </data>
 </RotationMatrix>
-<TranslationVector type_id="opencv-matrix">
+<TranslationMatrix type_id="opencv-matrix">
   <rows>3</rows>
   <cols>1</cols>
   <dt>f</dt>
   <data>
-    -195.03398107  
-    629.36211877 
+    -195.03398107
+    629.36211877
     3889.89250307
   </data>
-  </TranslationVector>
+  </TranslationMatrix>
 </opencv_storage>

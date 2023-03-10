@@ -9,10 +9,10 @@ from skimage import measure
 
 block_size = 1.0
 # data\camX\config.xml file paths
-config_cam1 = '..\data\cam1\config.xml'
-config_cam2 = '..\data\cam2\config.xml'
-config_cam3 = '..\data\cam3\config.xml'
-config_cam4 = '..\data\cam4\config.xml'
+config_cam1 = '..\..\Assignment3\step1\CameraData\extrinsic_cam1.xml'
+config_cam2 = '..\..\Assignment3\step1\CameraData\extrinsic_cam2.xml'
+config_cam3 = '..\..\Assignment3\step1\CameraData\extrinsic_cam3.xml'
+config_cam4 = '..\..\Assignment3\step1\CameraData\extrinsic_cam4.xml'
 
 
 def generate_grid(width, depth):
@@ -34,6 +34,8 @@ def get_index(data, img_path, color_path, rvec, tvec, intrinsic, dist):
     color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
     color = cv2.resize(color, [1000, 1000])
 
+
+
     projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec, tvec, intrinsic, dist)
     points = []
     indx = []
@@ -46,6 +48,15 @@ def get_index(data, img_path, color_path, rvec, tvec, intrinsic, dist):
             colors.append(color[np.int32(p[0][1]), np.int32(p[0][0])])
         else:
             colors.append([0, 0, 0])
+
+    c = [color[np.int32(p[0][1]), np.int32(p[0][0])] for p in points]
+    c = np.asarray(c)
+    c = np.float32(c)
+    print(c.shape)
+
+
+
+
     return points, indx, colors
 
 
@@ -56,38 +67,38 @@ def set_voxel_positions(width, height, depth):
     rvec_cam4 = cv2.Rodrigues(src=np.asarray(rmtx_cam4))[0]
 
     data, data_zy = [], []
-    width = 10
-    height = 14
-    depth = 12
+    width = 46
+    height = 30
+    depth = 10
     scale = 100
-    for x in range(width * 4):
-        for y in range(height * 4):
-            for z in range(depth * 4):
+    for x in range(width * 2):
+        for y in range(height * 2):
+            for z in range(depth * 2):
                 data.append(
-                    [scale * (0.25 * x * block_size), scale * (0.25 * y * block_size),
-                     scale * (0.25 * z * block_size - depth / 2)])
+                    [scale * (0.5 * x * block_size - width / 2), scale * (0.5 * y * block_size),
+                     scale * (0.5 * z * block_size - depth / 2)])
 
                 data_zy.append(
-                    [scale * (0.25 * x * block_size), scale * (0.25 * z * block_size - depth / 2),
-                     -scale * (0.25 * y * block_size)])
+                    [scale * (0.5 * x * block_size - width / 2), scale * (0.5 * z * block_size - depth / 2),
+                     -scale * (0.5 * y * block_size)])
 
-    points1, indx1, color1 = get_index(data_zy, "..\step2\cam1\diff\Diff_threshold.png", "..\step2\cam1\cam1_video.png",
-                                       rvec_cam1, tvec_cam1, intrinsic_cam1, dist_cam1)
-    points2, indx2, color2 = get_index(data_zy, "..\step2\cam2\diff\Diff_threshold.png", "..\step2\cam2\cam2_video.png",
+    # points1, indx1, color1 = get_index(data_zy, "..\step2\cam1\diff\Diff_threshold.png", "..\step2\cam1\cam1_video.png",
+    #                                    rvec_cam1, tvec_cam1, intrinsic_cam1, dist_cam1)
+    points2, indx2, color2 = get_index(data_zy, "..\..\Assignment3\step1\Diff\cam2\diff\Diff_threshold.png", "..\..\Assignment3\step1\Diff\cam2\cam2_frame.png",
                                        rvec_cam2, tvec_cam2, intrinsic_cam2, dist_cam2)
-    points3, indx3, color3 = get_index(data_zy, "..\step2\cam3\diff\Diff_threshold.png", "..\step2\cam3\cam3_video.png",
-                                       rvec_cam3, tvec_cam3, intrinsic_cam3, dist_cam3)
-    points4, indx4, color4 = get_index(data_zy, "..\step2\cam4\diff\Diff_threshold.png", "..\step2\cam4\cam4_video.png",
-                                       rvec_cam4, tvec_cam4, intrinsic_cam4, dist_cam4)
+    # points3, indx3, color3 = get_index(data_zy, "..\..\Assignment3\step1\Diff\cam3\diff\Diff_threshold.png", "..\..\Assignment3\step1\Diff\cam3\cam3_frame.png",
+    #                                    rvec_cam3, tvec_cam3, intrinsic_cam3, dist_cam3)
+    # points4, indx4, color4 = get_index(data_zy, "..\step2\cam4\diff\Diff_threshold.png", "..\step2\cam4\cam4_video.png",
+    #                                    rvec_cam4, tvec_cam4, intrinsic_cam4, dist_cam4)
 
-    colors = np.mean([color1, color2, color3, color4], axis=0)
+    #colors = np.mean([color1, color2, color3, color4], axis=0)
 
-    indx = np.intersect1d(indx1, indx2)
-    indx = np.intersect1d(indx, indx3)
-    indx = np.intersect1d(indx, indx4)
+    #indx = np.intersect1d(indx1, indx2)
+    #indx = np.intersect1d(indx, indx3)
+    #indx = np.intersect1d(indx, indx4)
 
-    data_p = [data[ind] for ind in indx]
-    color_p = [colors[ind] for ind in indx]
+    data_p = [data[ind] for ind in indx2]
+    color_p = [color2[ind] for ind in indx2]
 
     for i, dd in enumerate(data_p):
         temp = [d / scale for d in dd]
@@ -97,47 +108,27 @@ def set_voxel_positions(width, height, depth):
         temp = [c / 255 for c in cc]
         color_p[i] = temp
 
-    voxels = np.asarray(data_p)
-    ux = np.unique(voxels[:, 0])
-    uy = np.unique(voxels[:, 1])
-    uz = np.unique(voxels[:, 2])
+    c = [[d[0], d[2]] for d in data_p]
+    c = np.asarray(c)
+    c = np.float32(c)
 
-    # create a meshgrid
-    X, Y, Z = np.meshgrid(uy, ux, uz)
-    v = np.zeros(X.shape)
-    n = voxels.shape[0]
-    for i in range(n):
-        ix = ux == voxels[i, 0]
-        iy = uy == voxels[i, 1]
-        iz = uz == voxels[i, 2]
-        v[ix, iy, iz] = 1
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
+    # K-Means 聚类
+    ret, label, center = cv2.kmeans(c, 4, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+    center = np.uint8(center)
+    # 将具有 k 颜色中心的图像转换为 uint8
+    res = center[label.flatten()]
+    print(res.shape)
 
-    # Use marching cubes to obtain the surface mesh
-    verts, faces, normals, values = measure.marching_cubes(v)
-
-    # Display resulting triangular mesh using Matplotlib
-    fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(projection='3d')
-    ax.view_init(elev=22, azim=20, roll=97.5)  # right
-    # ax.view_init(elev=30, azim=25, roll=102.5)  # right
-    # ax.view_init(elev=28, azim=165, roll=-97)  # left
-    # ax.view_init(elev=65, azim=120, roll=-148.5)  # front
-
-    # `verts[faces]` to generate a collection of triangles
-    mesh = Poly3DCollection(verts[faces])
-    mesh.set_edgecolor('k')
-    ax.add_collection3d(mesh)
-
-    ax.set_xlabel("x-axis")
-    ax.set_ylabel("y-axis")
-    ax.set_zlabel("z-axis")
-
-    ax.set_xlim(-10, 40)
-    ax.set_ylim(0, 50)
-    ax.set_zlim(-15, 35)
-    plt.tight_layout()
-    plt.show()
-    fig.savefig("mesh.pdf")
+    for i in range(label.shape[0]):
+        if label[i] == 0:
+            color_p[i] = [0, 0, 0]
+        elif label[i] == 1:
+            color_p[i] = [1, 0, 0]
+        elif label[i] == 2:
+            color_p[i] = [0, 1, 0]
+        elif label[i] == 3:
+            color_p[i] = [0, 0, 1]
 
     return data_p, color_p
 
@@ -168,10 +159,10 @@ def get_cam_positions():
         cams_3d[i][2] = c
     print(cams_3d)
 
-    # cams_3d = np.array([[2720.192 ,  1090.0698,  3051.115], 
-    #                     [ 368.86923,  1157.011,  3410.093 ], 
-    #                     [3074.9678, 1106.0835,    412.38507],
-    #                     [-2246.4001, 1180.3229,  3075.0542]])/100
+    # cams_3d = np.array([[ 27.66822    16.419746   22.834217 ]
+    #                       [  5.399558   16.793898   30.340225 ]
+    #                       [-22.179577   16.294825   -2.1881757]
+    #                       [-21.764788   17.307413   23.527065 ]]
 
     return cams_3d, [[1.0, 0, 0], [0, 1.0, 0], [0, 0, 1.0], [1.0, 1.0, 0]]
 
@@ -242,6 +233,52 @@ def get_cam_rotation_matrices():
 # load cam data from config.xml files:
 # intrinsic matrix, distortionCoefficients, rotation matrix R, translation vector T
 intrinsic_cam1, dist_cam1, rmtx_cam1, tvec_cam1 = readCamConfig(config_cam1)
+print(tvec_cam1)
 intrinsic_cam2, dist_cam2, rmtx_cam2, tvec_cam2 = readCamConfig(config_cam2)
 intrinsic_cam3, dist_cam3, rmtx_cam3, tvec_cam3 = readCamConfig(config_cam3)
 intrinsic_cam4, dist_cam4, rmtx_cam4, tvec_cam4 = readCamConfig(config_cam4)
+
+
+'''
+voxels = np.asarray(data_p)
+    ux = np.unique(voxels[:, 0])
+    uy = np.unique(voxels[:, 1])
+    uz = np.unique(voxels[:, 2])
+
+    # create a meshgrid
+    X, Y, Z = np.meshgrid(uy, ux, uz)
+    v = np.zeros(X.shape)
+    n = voxels.shape[0]
+    for i in range(n):
+        ix = ux == voxels[i, 0]
+        iy = uy == voxels[i, 1]
+        iz = uz == voxels[i, 2]
+        v[ix, iy, iz] = 1
+
+    # Use marching cubes to obtain the surface mesh
+    verts, faces, normals, values = measure.marching_cubes(v)
+
+    # Display resulting triangular mesh using Matplotlib
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(projection='3d')
+    ax.view_init(elev=22, azim=20, roll=97.5)  # right
+    # ax.view_init(elev=30, azim=25, roll=102.5)  # right
+    # ax.view_init(elev=28, azim=165, roll=-97)  # left
+    # ax.view_init(elev=65, azim=120, roll=-148.5)  # front
+
+    # `verts[faces]` to generate a collection of triangles
+    mesh = Poly3DCollection(verts[faces])
+    mesh.set_edgecolor('k')
+    ax.add_collection3d(mesh)
+
+    ax.set_xlabel("x-axis")
+    ax.set_ylabel("y-axis")
+    ax.set_zlabel("z-axis")
+
+    ax.set_xlim(-10, 40)
+    ax.set_ylim(0, 50)
+    ax.set_zlim(-15, 35)
+    plt.tight_layout()
+    plt.show()
+    fig.savefig("mesh.pdf")
+'''
