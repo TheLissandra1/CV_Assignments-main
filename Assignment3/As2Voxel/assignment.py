@@ -54,6 +54,7 @@ def get_color(color_img, data, rvec, tvec, intrinsic, dist):
     # convert from BGR to rgb
     rgb = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
 
+    data = [i for i in data if -1300 < i[2] < -1100]
     colors = []
     projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec, tvec, intrinsic, dist)
     for i, p in enumerate(projectedPoints):
@@ -69,12 +70,12 @@ def get_color(color_img, data, rvec, tvec, intrinsic, dist):
     v = hsv[:, :, 2]
 
     # histogram of h
-    # in opencv, hsv range from 0 to 180
-    hist, bins = np.histogram(h.ravel(), 180, [0, 180])
+    hist, bins = np.histogram(h.ravel(), 360, [0, 360])
 
     dominant_Hue = np.argmax(hist)
     # plt.plot(hist)
     # plt.show()
+    print("Dominant Color: ", dominant_Hue)
 
     # s,v channel compute average
     s_avg = np.rint(np.average(s.ravel())).astype(int)
@@ -89,16 +90,52 @@ def get_color(color_img, data, rvec, tvec, intrinsic, dist):
     dominant_color_rgb = cv2.cvtColor(dominant_color, cv2.COLOR_HSV2RGB)
     print(dominant_color_rgb)
 
-    return dominant_color_rgb[0][0]
+    return dominant_color[0][0], dominant_color_rgb[0][0]
 
 
 def get_person_color(color_img, persons, color_list, rvec, tvec, intrinsic, dist):
     color = cv2.imread(color_img, cv2.IMREAD_COLOR)
     color = cv2.resize(color, [1000, 1000])
+    dominant_hsvs = []
     for person in persons:
-        c = get_color(color, list(person.values()), rvec, tvec, intrinsic, dist)
+        dominant_hsv, _ = get_color(color, list(person.values()), rvec, tvec, intrinsic, dist)
+        dominant_hsvs.append(dominant_hsv)
+
+    dominant_hsvs = np.asarray(dominant_hsvs)
+    max_h = np.max(dominant_hsvs, axis=0)[0]
+    min_h = np.min(dominant_hsvs, axis=0)[0]
+    temp_h = min_h
+    temp_i = -1
+    new_hsv = []
+    for i, d_h in enumerate(dominant_hsvs):
+        if d_h[0] == max_h:
+            new_hsv.append([300, d_h[1], 125])
+            continue
+        if d_h[0] == min_h:
+            new_hsv.append([0, d_h[1], 125])
+            continue
+
+        if temp_i == -1:
+            temp_h = d_h[0]
+            temp_i = i
+            new_hsv.append([d_h[0], d_h[1], 125])
+        else:
+            if d_h[0] > temp_h:
+                new_hsv.append([200, d_h[1], 125])
+                new_hsv[temp_i][0] = 100
+            else:
+                new_hsv.append([100, d_h[1], 125])
+                new_hsv[temp_i][0] = 200
+
+    print(new_hsv)
+
+    c = []
+    for h in new_hsv:
+        c.append(cv2.cvtColor(np.float32([[h]]), cv2.COLOR_HSV2RGB))
+
+    for i, person in enumerate(persons):
         for k in person.keys():
-            color_list[k] = c
+            color_list[k] = c[i]
 
 
 def set_voxel_positions(width, height, depth):
@@ -110,7 +147,7 @@ def set_voxel_positions(width, height, depth):
     data, data_zy = [], []
     width = 50
     height = 25
-    depth = 30
+    depth = 50
     scale = 100
     for x in range(width * 2):
         for y in range(height * 2):
@@ -143,6 +180,7 @@ def set_voxel_positions(width, height, depth):
     indx = np.intersect1d(indx, indx4)
 
     data_p = [data[ind] for ind in indx]
+    data_zy_p = [data_zy[ind] for ind in indx]
     color_p = [colors[ind] for ind in indx]
 
     for i, dd in enumerate(data_p):
@@ -154,27 +192,22 @@ def set_voxel_positions(width, height, depth):
     c = np.float32(c)
 
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
-    # K-Means 聚类
+    # K-Means cluster
     ret, label, center = cv2.kmeans(c, 4, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
-    center = np.uint8(center)
 
     p0, p1, p2, p3 = {}, {}, {}, {}
     for i in range(label.shape[0]):
         if label[i] == 0:
-            p0[i] = data_p[i]
-            color_p[i] = [0, 0, 0]
+            p0[i] = data_zy_p[i]
         elif label[i] == 1:
-            p1[i] = data_p[i]
-            color_p[i] = [255, 0, 0]
+            p1[i] = data_zy_p[i]
         elif label[i] == 2:
-            p2[i] = data_p[i]
-            color_p[i] = [0, 255, 0]
+            p2[i] = data_zy_p[i]
         elif label[i] == 3:
-            p3[i] = data_p[i]
-            color_p[i] = [0, 0, 255]
+            p3[i] = data_zy_p[i]
 
-    get_person_color("..\step1\Diff\cam1\cam1 - frame at 0m0s.png", [p0, p1, p2, p3], color_p,
-                     rvec_cam1, tvec_cam1, intrinsic_cam1, dist_cam1)
+    get_person_color("..\step1\Diff\cam2\cam2 - frame at 0m0s.png", [p0, p1, p2, p3], color_p,
+                     rvec_cam2, tvec_cam2, intrinsic_cam2, dist_cam2)
 
     for i, cc in enumerate(color_p):
         temp = [c / 255 for c in cc]
@@ -183,8 +216,6 @@ def set_voxel_positions(width, height, depth):
 
 
 def get_cam_positions():
-    # Generates dummy camera locations at the 4 corners of the room
-    # TODO: You need to input the estimated locations of the 4 cameras in the world coordinates.
     # camera positions given in R^3 , need to project to R^2
 
     # compute camera postion
@@ -246,9 +277,6 @@ def expandTo4x4(mtx):
 
 
 def get_cam_rotation_matrices():
-    # Generates dummy camera rotation matrices, looking down 45 degrees towards the center of the room
-    # TODO: You need to input the estimated camera rotation matrices (4x4) of the 4 cameras in the world coordinates.
-
     # need to transform rotation matrix
     # rotation = glm.rotate(rotation, np.pi / 2, [0, 0, 1])
     # camera rotation matrices in (4x4) form
