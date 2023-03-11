@@ -34,8 +34,6 @@ def get_index(data, img_path, color_path, rvec, tvec, intrinsic, dist):
     color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
     color = cv2.resize(color, [1000, 1000])
 
-
-
     projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec, tvec, intrinsic, dist)
     points = []
     indx = []
@@ -49,15 +47,58 @@ def get_index(data, img_path, color_path, rvec, tvec, intrinsic, dist):
         else:
             colors.append([0, 0, 0])
 
-    c = [color[np.int32(p[0][1]), np.int32(p[0][0])] for p in points]
-    c = np.asarray(c)
-    c = np.float32(c)
-    print(c.shape)
-
-
-
-
     return points, indx, colors
+
+
+def get_color(color_img, data, rvec, tvec, intrinsic, dist):
+    # convert from BGR to rgb
+    rgb = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
+
+    colors = []
+    projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec, tvec, intrinsic, dist)
+    for i, p in enumerate(projectedPoints):
+        if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
+            colors.append(rgb[np.int32(p[0][1]), np.int32(p[0][0])])
+
+    colors = np.asarray(colors).reshape([1, len(colors), 3])
+    # convert from BGR to HSV
+    hsv = cv2.cvtColor(colors, cv2.COLOR_RGB2HSV)
+
+    h = hsv[:, :, 0]
+    s = hsv[:, :, 1]
+    v = hsv[:, :, 2]
+
+    # histogram of h
+    # in opencv, hsv range from 0 to 180
+    hist, bins = np.histogram(h.ravel(), 180, [0, 180])
+
+    dominant_Hue = np.argmax(hist)
+    # plt.plot(hist)
+    # plt.show()
+
+    # s,v channel compute average
+    s_avg = np.rint(np.average(s.ravel())).astype(int)
+    s_new = np.full((s.shape), s_avg)
+    v_avg = np.rint(np.average(v.ravel())).astype(int)
+    v_new = np.full((s.shape), v_avg)
+    hsv[:, :, 1] = s_new
+    hsv[:, :, 2] = v_new
+
+    dominant_color = np.uint8([[[dominant_Hue, s_avg, v_avg]]])
+    # convert to rgb values
+    dominant_color_rgb = cv2.cvtColor(dominant_color, cv2.COLOR_HSV2RGB)
+    print(dominant_color_rgb)
+
+    return dominant_color_rgb[0][0]
+
+
+def get_person_color(color_img, persons, color_list, rvec, tvec, intrinsic, dist):
+    color = cv2.imread(color_img, cv2.IMREAD_COLOR)
+    color = cv2.resize(color, [1000, 1000])
+    for person in persons:
+        c = get_color(color, list(person.values()), rvec, tvec, intrinsic, dist)
+        for k in person.keys():
+            color_list[k] = c
 
 
 def set_voxel_positions(width, height, depth):
@@ -67,9 +108,9 @@ def set_voxel_positions(width, height, depth):
     rvec_cam4 = cv2.Rodrigues(src=np.asarray(rmtx_cam4))[0]
 
     data, data_zy = [], []
-    width = 46
-    height = 30
-    depth = 16
+    width = 50
+    height = 25
+    depth = 30
     scale = 100
     for x in range(width * 2):
         for y in range(height * 2):
@@ -82,18 +123,20 @@ def set_voxel_positions(width, height, depth):
                     [scale * (0.5 * x * block_size - width / 2), scale * (0.5 * z * block_size - depth / 2),
                      -scale * (0.5 * y * block_size)])
 
-    points1, indx1, color1 = get_index(data_zy, "..\step1\Diff\cam1\diff\Diff_threshold.png", "..\step1\Diff\cam1\cam1 - frame at 0m0s.png",
+    points1, indx1, color1 = get_index(data_zy, "..\step1\Diff\cam1\diff\Diff_threshold.png",
+                                       "..\step1\Diff\cam1\cam1 - frame at 0m0s.png",
                                        rvec_cam1, tvec_cam1, intrinsic_cam1, dist_cam1)
-    points2, indx2, color2 = get_index(data_zy, "..\step1\Diff\cam2\diff\Diff_threshold.png", "..\step1\Diff\cam2\cam2 - frame at 0m0s.png",
+    points2, indx2, color2 = get_index(data_zy, "..\step1\Diff\cam2\diff\Diff_threshold.png",
+                                       "..\step1\Diff\cam2\cam2 - frame at 0m0s.png",
                                        rvec_cam2, tvec_cam2, intrinsic_cam2, dist_cam2)
-    points3, indx3, color3 = get_index(data_zy, "..\step1\Diff\cam3\diff\Diff_threshold.png", "..\step1\Diff\cam3\cam3 - frame at 0m0s.png",
+    points3, indx3, color3 = get_index(data_zy, "..\step1\Diff\cam3\diff\Diff_threshold.png",
+                                       "..\step1\Diff\cam3\cam3 - frame at 0m0s.png",
                                        rvec_cam3, tvec_cam3, intrinsic_cam3, dist_cam3)
-    points4, indx4, color4 = get_index(data_zy, "..\step1\Diff\cam4\diff\Diff_threshold.png", "..\step1\Diff\cam4\cam4 - frame at 0m0s.png",
+    points4, indx4, color4 = get_index(data_zy, "..\step1\Diff\cam4\diff\Diff_threshold.png",
+                                       "..\step1\Diff\cam4\cam4 - frame at 0m0s.png",
                                        rvec_cam4, tvec_cam4, intrinsic_cam4, dist_cam4)
 
     colors = np.mean([color1, color2, color3, color4], axis=0)
-   
-    
 
     indx = np.intersect1d(indx1, indx2)
     indx = np.intersect1d(indx, indx3)
@@ -106,32 +149,36 @@ def set_voxel_positions(width, height, depth):
         temp = [d / scale for d in dd]
         data_p[i] = temp
 
+    c = [[d[0], d[2]] for d in data_p]
+    c = np.asarray(c)
+    c = np.float32(c)
+
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
+    # K-Means 聚类
+    ret, label, center = cv2.kmeans(c, 4, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+    center = np.uint8(center)
+
+    p0, p1, p2, p3 = {}, {}, {}, {}
+    for i in range(label.shape[0]):
+        if label[i] == 0:
+            p0[i] = data_p[i]
+            color_p[i] = [0, 0, 0]
+        elif label[i] == 1:
+            p1[i] = data_p[i]
+            color_p[i] = [255, 0, 0]
+        elif label[i] == 2:
+            p2[i] = data_p[i]
+            color_p[i] = [0, 255, 0]
+        elif label[i] == 3:
+            p3[i] = data_p[i]
+            color_p[i] = [0, 0, 255]
+
+    get_person_color("..\step1\Diff\cam1\cam1 - frame at 0m0s.png", [p0, p1, p2, p3], color_p,
+                     rvec_cam1, tvec_cam1, intrinsic_cam1, dist_cam1)
+
     for i, cc in enumerate(color_p):
         temp = [c / 255 for c in cc]
         color_p[i] = temp
-
-    # c = [[d[0], d[2]] for d in data_p]
-    # c = np.asarray(c)
-    # c = np.float32(c)
-
-    # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
-    # # K-Means 聚类
-    # ret, label, center = cv2.kmeans(c, 4, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
-    # center = np.uint8(center)
-    # # 将具有 k 颜色中心的图像转换为 uint8
-    # res = center[label.flatten()]
-    # print(res.shape)
-
-    # for i in range(label.shape[0]):
-    #     if label[i] == 0:
-    #         color_p[i] = [0, 0, 0]
-    #     elif label[i] == 1:
-    #         color_p[i] = [1, 0, 0]
-    #     elif label[i] == 2:
-    #         color_p[i] = [0, 1, 0]
-    #     elif label[i] == 3:
-    #         color_p[i] = [0, 0, 1]
-
     return data_p, color_p
 
 
@@ -238,10 +285,6 @@ intrinsic_cam1, dist_cam1, rmtx_cam1, tvec_cam1 = readCamConfig(config_cam1)
 intrinsic_cam2, dist_cam2, rmtx_cam2, tvec_cam2 = readCamConfig(config_cam2)
 intrinsic_cam3, dist_cam3, rmtx_cam3, tvec_cam3 = readCamConfig(config_cam3)
 intrinsic_cam4, dist_cam4, rmtx_cam4, tvec_cam4 = readCamConfig(config_cam4)
-
-
-
-
 
 '''
 voxels = np.asarray(data_p)
