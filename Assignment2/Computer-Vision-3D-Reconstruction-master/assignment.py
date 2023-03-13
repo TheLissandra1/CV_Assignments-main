@@ -84,7 +84,8 @@ def set_voxel_positions(width, height, depth):
 
     # points1, indx1, color1 = get_index(data_zy, "..\step2\cam1\diff\Diff_threshold.png", "..\step2\cam1\cam1_video.png",
     #                                    rvec_cam1, tvec_cam1, intrinsic_cam1, dist_cam1)
-    points2, indx2, color2 = get_index(data_zy, "..\..\Assignment3\step1\Diff\cam2\diff\Diff_threshold.png", "..\..\Assignment3\step1\Diff\cam2\cam2_frame.png",
+    points2, indx2, color2 = get_index(data_zy, "../../Assignment3/Diff\cam2\diff\Diff_threshold.png",
+                                       "../../Assignment3/Diff\cam2\cam2_frame.png",
                                        rvec_cam2, tvec_cam2, intrinsic_cam2, dist_cam2)
     # points3, indx3, color3 = get_index(data_zy, "..\..\Assignment3\step1\Diff\cam3\diff\Diff_threshold.png", "..\..\Assignment3\step1\Diff\cam3\cam3_frame.png",
     #                                    rvec_cam3, tvec_cam3, intrinsic_cam3, dist_cam3)

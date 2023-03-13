@@ -40,15 +40,15 @@ def compute_AllDiff(path_list):
 
 
 # replace cam1 to cam2, cam3, cam4
-root = '..\Assignment3\step1\Diff\cam1'
-background_img_path = '../Assignment3/Diff\cam1\hsv\hsv_cam1_background.png'
-background_img_path_H = '../Assignment3/Diff\cam1\hsv\channel0_cam1_background.png'
-background_img_path_S = '../Assignment3/Diff\cam1\hsv\channel1_cam1_background.png'
-background_img_path_V = '../Assignment3/Diff\cam1\hsv\channel2_cam1_background.png'
-foreground_img_path = '../Assignment3/Diff\cam1\hsv\hsv_cam1_frame.png'
-foreground_img_path_H = '../Assignment3/Diff\cam1\hsv\channel0_cam1_frame.png'
-foreground_img_path_S = '../Assignment3/Diff\cam1\hsv\channel1_cam1_frame.png'
-foreground_img_path_V = '../Assignment3/Diff\cam1\hsv\channel2_cam1_frame.png'
+root = 'Diff\cam4'
+background_img_path = 'Diff\cam4\hsv\hsv_cam4_background0.png'
+background_img_path_H = 'Diff\cam4\hsv\channel0_cam4_background0.png'
+background_img_path_S = 'Diff\cam4\hsv\channel1_cam4_background0.png'
+background_img_path_V = 'Diff\cam4\hsv\channel2_cam4_background0.png'
+foreground_img_path = 'Diff\cam4\hsv\hsv_cam4 - frame at 0m0s.png'
+foreground_img_path_H = 'Diff\cam4\hsv\channel0_cam4 - frame at 0m0s.png'
+foreground_img_path_S = 'Diff\cam4\hsv\channel1_cam4 - frame at 0m0s.png'
+foreground_img_path_V = 'Diff\cam4\hsv\channel2_cam4 - frame at 0m0s.png'
 
 path_list = [root, background_img_path, background_img_path_H, background_img_path_S, background_img_path_V,
              foreground_img_path, foreground_img_path_H, foreground_img_path_S, foreground_img_path_V]

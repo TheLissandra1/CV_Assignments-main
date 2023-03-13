@@ -9,10 +9,10 @@ from skimage import measure
 
 block_size = 1.0
 # data\camX\config.xml file paths
-config_cam1 = '..\step1\CameraData\extrinsic_cam1.xml'
-config_cam2 = '..\step1\CameraData\extrinsic_cam2.xml'
-config_cam3 = '..\step1\CameraData\extrinsic_cam3.xml'
-config_cam4 = '..\step1\CameraData\extrinsic_cam4.xml'
+config_cam1 = '..\CameraData\extrinsic_cam1.xml'
+config_cam2 = '..\CameraData\extrinsic_cam2.xml'
+config_cam3 = '..\CameraData\extrinsic_cam3.xml'
+config_cam4 = '..\CameraData\extrinsic_cam4.xml'
 
 
 def generate_grid(width, depth):
@@ -160,17 +160,17 @@ def set_voxel_positions(width, height, depth):
                     [scale * (0.5 * x * block_size - width / 2), scale * (0.5 * z * block_size - depth / 2),
                      -scale * (0.5 * y * block_size)])
 
-    points1, indx1, color1 = get_index(data_zy, "..\step1\Diff\cam1\diff\Diff_threshold.png",
-                                       "..\step1\Diff\cam1\cam1 - frame at 0m0s.png",
+    points1, indx1, color1 = get_index(data_zy, "..\Diff\cam1\diff\Diff_threshold.png",
+                                       "..\Diff\cam1\cam1 - frame at 0m0s.png",
                                        rvec_cam1, tvec_cam1, intrinsic_cam1, dist_cam1)
-    points2, indx2, color2 = get_index(data_zy, "..\step1\Diff\cam2\diff\Diff_threshold.png",
-                                       "..\step1\Diff\cam2\cam2 - frame at 0m0s.png",
+    points2, indx2, color2 = get_index(data_zy, "..\Diff\cam2\diff\Diff_threshold.png",
+                                       "..\Diff\cam2\cam2 - frame at 0m0s.png",
                                        rvec_cam2, tvec_cam2, intrinsic_cam2, dist_cam2)
-    points3, indx3, color3 = get_index(data_zy, "..\step1\Diff\cam3\diff\Diff_threshold.png",
-                                       "..\step1\Diff\cam3\cam3 - frame at 0m0s.png",
+    points3, indx3, color3 = get_index(data_zy, "..\Diff\cam3\diff\Diff_threshold.png",
+                                       "..\Diff\cam3\cam3 - frame at 0m0s.png",
                                        rvec_cam3, tvec_cam3, intrinsic_cam3, dist_cam3)
-    points4, indx4, color4 = get_index(data_zy, "..\step1\Diff\cam4\diff\Diff_threshold.png",
-                                       "..\step1\Diff\cam4\cam4 - frame at 0m0s.png",
+    points4, indx4, color4 = get_index(data_zy, "..\Diff\cam4\diff\Diff_threshold.png",
+                                       "..\Diff\cam4\cam4 - frame at 0m0s.png",
                                        rvec_cam4, tvec_cam4, intrinsic_cam4, dist_cam4)
 
     colors = np.mean([color1, color2, color3, color4], axis=0)
@@ -206,7 +206,7 @@ def set_voxel_positions(width, height, depth):
         elif label[i] == 3:
             p3[i] = data_zy_p[i]
 
-    get_person_color("..\step1\Diff\cam2\cam2 - frame at 0m0s.png", [p0, p1, p2, p3], color_p,
+    get_person_color("..\Diff\cam2\cam2 - frame at 0m0s.png", [p0, p1, p2, p3], color_p,
                      rvec_cam2, tvec_cam2, intrinsic_cam2, dist_cam2)
 
     for i, cc in enumerate(color_p):

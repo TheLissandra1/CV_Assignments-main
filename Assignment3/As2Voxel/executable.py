@@ -7,9 +7,12 @@ from engine.buffer.hdrbuffer import HDRBuffer
 from engine.buffer.blurbuffer import BlurBuffer
 from engine.effect.bloom import Bloom
 from assignment import set_voxel_positions, generate_grid, get_cam_positions, get_cam_rotation_matrices
+from assignment1 import set_voxel, init_voxel
 from engine.camera import Camera
 from engine.config import config
 
+data, data_zy = [], []
+initial = 1
 cube, hdrbuffer, blurbuffer, lastPosX, lastPosY = None, None, None, None, None
 firstTime = True
 window_width, window_height = config['window_width'], config['window_height']
@@ -180,12 +183,29 @@ def resize_callback(window, w, h):
 
 
 def key_callback(window, key, scancode, action, mods):
+    global cube, data, data_zy, initial
     if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
         glfw.set_window_should_close(window, glfw.TRUE)
     if key == glfw.KEY_G and action == glfw.PRESS:
-        global cube
         positions, colors = set_voxel_positions(config['world_width'], config['world_height'], config['world_width'])
         cube.set_multiple_positions(positions, colors)
+    if key == glfw.KEY_I and action == glfw.PRESS:
+        data_zy = init_voxel()
+        initial = 10
+    if key == glfw.KEY_V and action == glfw.PRESS:
+        fg_root = "../foreground/"
+        view_root = "../videoframe/"
+
+        print(initial, "start")
+
+        fg_path, cam_views = [], []
+        for j in range(4):
+            fg_path.append(fg_root + "cam" + str(j + 1) + "/" + str(initial * 10) + ".png")  # ../foreground/cam1/0.png
+            cam_views.append(view_root + "cam" + str(j + 1) + "/" + str(initial * 10) + ".png")
+        positions, colors = set_voxel(fg_path, cam_views, init=data_zy)
+        cube.set_multiple_positions(positions, colors)
+        print(initial, "done")
+        initial = initial + 1
 
 
 def mouse_move(win, pos_x, pos_y):
