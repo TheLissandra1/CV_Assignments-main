@@ -191,7 +191,7 @@ def key_callback(window, key, scancode, action, mods):
         cube.set_multiple_positions(positions, colors)
     if key == glfw.KEY_I and action == glfw.PRESS:
         data_zy = init_voxel()
-        initial = 10
+        initial = 12
     if key == glfw.KEY_V and action == glfw.PRESS:
         fg_root = "../foreground/"
         view_root = "../videoframe/"

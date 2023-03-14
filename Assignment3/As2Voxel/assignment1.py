@@ -21,7 +21,7 @@ def generate_grid(width, depth):
     for x in range(width):
         for z in range(depth):
             data.append([x * block_size - width / 2, -block_size, z * block_size - depth / 2])
-            colors.append([1.0, 1.0, 1.0] if (x + z) % 2 == 0 else [0, 0, 0])
+            colors.append([1.0, 1.0, 1.0])  # if (x + z) % 2 == 0 else [0, 0, 0])
     return data, colors
 
 
@@ -195,44 +195,79 @@ def set_voxel(fg_path, cam_views, init=None):
         data_zy = init_voxel()
     else:
         data_zy = init
-    print("voxel start")
-    data_ii, colors = build_voxel_model(fg_path, cam_views, data_zy, rvecs, tvecs, intrinsics, dists)
-    print("voxel")
 
-    data_p = [[data[0], -data[2], data[1]] for data in data_ii]
+    result_zy, colors = build_voxel_model(fg_path, cam_views, data_zy, rvecs, tvecs, intrinsics, dists)
+
+    result = [[data[0], -data[2], data[1]] for data in result_zy]
     color_p = colors
 
-    for i, dd in enumerate(data_p):
+    for i, dd in enumerate(result):
         temp = [d / 100 for d in dd]
-        data_p[i] = temp
+        result[i] = temp
 
-    c = [[d[0], d[2]] for d in data_p]
+    c = [[d[0], d[2]] for d in result]
     c = np.asarray(c)
     c = np.float32(c)
 
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
-    # K-Means cluster
-    ret, label, center = cv2.kmeans(c, 4, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+    ghost = True
+    while ghost:
+        # K-Means cluster
+        ret, label, center = cv2.kmeans(c, 4, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+        print("r: ", len(result))
+        print("zy: ", len(result_zy))
+        print("ll: ", label.shape)
 
-    p0, p1, p2, p3 = {}, {}, {}, {}
-    for i in range(label.shape[0]):
-        if label[i] == 0:
-            p0[i] = data_ii[i]
-        elif label[i] == 1:
-            p1[i] = data_ii[i]
-        elif label[i] == 2:
-            p2[i] = data_ii[i]
-        elif label[i] == 3:
-            p3[i] = data_ii[i]
+        p0, p1, p2, p3 = {}, {}, {}, {}
+        counts = [0, 0, 0, 0]
+        for i in range(label.shape[0]):
+            if label[i] == 0:
+                p0[i] = result_zy[i]
+                counts[0] += 1
+            elif label[i] == 1:
+                p1[i] = result_zy[i]
+                counts[1] += 1
+            elif label[i] == 2:
+                p2[i] = result_zy[i]
+                counts[2] += 1
+            elif label[i] == 3:
+                p3[i] = result_zy[i]
+                counts[3] += 1
+
+        people = [p0, p1, p2, p3]
+        ghost = False
+        wrong = []
+        # check wrong cluster because of ghost voxels
+        for i, count in enumerate(counts):
+            if count < 800:
+                wrong.append(i)
+
+        print("ww: ", wrong)
+        if len(wrong) > 0:
+            ghost = True
+            for w in wrong:
+                keys = list(people[w].keys())
+                keys.reverse()
+                for key in keys:
+                    result.pop(key)
+                    result_zy.pop(key)
+                    color_p.pop(key)
+                    c = [[d[0], d[2]] for d in result]
+                    c = np.asarray(c)
+                    c = np.float32(c)
+
+
+
+
 
     test_cam = 1  # cam2 view
-    get_person_color(cam_views[test_cam], [p0, p1, p2, p3], color_p,
+    get_person_color(cam_views[test_cam], people, color_p,
                      rvecs[test_cam], tvecs[test_cam], intrinsics[test_cam], dists[test_cam])
 
     for i, cc in enumerate(color_p):
         temp = [c / 255 for c in cc]
         color_p[i] = temp
-    return data_p, color_p
+    return result, color_p
 
 
 def get_cam_positions():

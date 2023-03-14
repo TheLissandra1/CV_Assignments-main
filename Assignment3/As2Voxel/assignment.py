@@ -22,7 +22,7 @@ def generate_grid(width, depth):
     for x in range(width):
         for z in range(depth):
             data.append([x * block_size - width / 2, -block_size, z * block_size - depth / 2])
-            colors.append([1.0, 1.0, 1.0] if (x + z) % 2 == 0 else [0, 0, 0])
+            colors.append([1.0, 1.0, 1.0]) # if (x + z) % 2 == 0 else [0, 0, 0])
     return data, colors
 
 
@@ -89,6 +89,7 @@ def get_color(color_img, data, rvec, tvec, intrinsic, dist):
     # convert to rgb values
     dominant_color_rgb = cv2.cvtColor(dominant_color, cv2.COLOR_HSV2RGB)
     print(dominant_color_rgb)
+    print(dominant_color[0][0])
 
     return dominant_color[0][0], dominant_color_rgb[0][0]
 
