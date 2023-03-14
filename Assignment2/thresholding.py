@@ -129,7 +129,7 @@ def threshold(hsv):
     result = clean_foreground(result, small_cs)
 
     cv2.imshow('Thresholded Image', result)
-    cv2.imwrite("..\Assignment3\step1\Diff\cam4\diff\Diff_threshold.png", result)
+    cv2.imwrite("../Assignment3/Diff\cam4\diff\Diff_threshold.png", result)
     cv2.destroyAllWindows()
     return result
 
