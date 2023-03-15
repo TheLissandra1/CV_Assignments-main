@@ -77,15 +77,27 @@ def get_color(color_img, data, rvec, tvec, intrinsic, dist):
     # plt.show()
     print("Dominant Color: ", dominant_Hue)
 
-    # s,v channel compute average
-    s_avg = np.rint(np.average(s.ravel())).astype(int)
-    s_new = np.full((s.shape), s_avg)
-    v_avg = np.rint(np.average(v.ravel())).astype(int)
-    v_new = np.full((s.shape), v_avg)
+    # s and v also use the peak values
+    s_hist,_ = np.histogram(s.ravel(),255,[0,255]) 
+    s_peak = np.argmax(s_hist)
+    s_new = np.full((s.shape), s_peak)
     hsv[:, :, 1] = s_new
+
+    v_hist,_ = np.histogram(v.ravel(),255,[0,255])  
+    v_peak = np.argmax(v_hist)
+    v_new = np.full((v.shape), v_peak)
     hsv[:, :, 2] = v_new
 
-    dominant_color = np.uint8([[[dominant_Hue, s_avg, v_avg]]])
+    # # s,v channel compute average
+    # s_avg = np.rint(np.average(s.ravel())).astype(int)
+    # s_new = np.full((s.shape), s_avg)
+    # v_avg = np.rint(np.average(v.ravel())).astype(int)
+    # v_new = np.full((s.shape), v_avg)
+    # hsv[:, :, 1] = s_new
+    # hsv[:, :, 2] = v_new
+
+    dominant_color = np.uint8([[[dominant_Hue, s_peak, v_peak]]])
+    # dominant_color = np.uint8([[[dominant_Hue, s_avg, v_avg]]])
     # convert to rgb values
     dominant_color_rgb = cv2.cvtColor(dominant_color, cv2.COLOR_HSV2RGB)
     print(dominant_color_rgb)
@@ -93,6 +105,10 @@ def get_color(color_img, data, rvec, tvec, intrinsic, dist):
 
     return dominant_color[0][0], dominant_color_rgb[0][0]
 
+# compute manhattan distance between two 3d vectors
+def ManhattanDistance(color1, color2):
+    ManhattanDistance = sum(abs(val1-val2) for val1, val2 in zip(color1, color2))
+    return ManhattanDistance
 
 def get_person_color(color_img, persons, color_list, rvec, tvec, intrinsic, dist):
     color = cv2.imread(color_img, cv2.IMREAD_COLOR)
@@ -103,30 +119,56 @@ def get_person_color(color_img, persons, color_list, rvec, tvec, intrinsic, dist
         dominant_hsvs.append(dominant_hsv)
 
     dominant_hsvs = np.asarray(dominant_hsvs)
-    max_h = np.max(dominant_hsvs, axis=0)[0]
-    min_h = np.min(dominant_hsvs, axis=0)[0]
-    temp_h = min_h
-    temp_i = -1
+    # # rank persons' distance between baseline and new frame
+    
+    
+    # max_h = np.max(dominant_hsvs, axis=0)[0]
+    # min_h = np.min(dominant_hsvs, axis=0)[0]
+    # temp_h = min_h
+    # temp_i = -1
     new_hsv = []
-    for i, d_h in enumerate(dominant_hsvs):
-        if d_h[0] == max_h:
-            new_hsv.append([300, d_h[1], 125])
-            continue
-        if d_h[0] == min_h:
-            new_hsv.append([0, d_h[1], 125])
-            continue
 
-        if temp_i == -1:
-            temp_h = d_h[0]
-            temp_i = i
-            new_hsv.append([d_h[0], d_h[1], 125])
-        else:
-            if d_h[0] > temp_h:
-                new_hsv.append([200, d_h[1], 125])
-                new_hsv[temp_i][0] = 100
-            else:
-                new_hsv.append([100, d_h[1], 125])
-                new_hsv[temp_i][0] = 200
+    baselines = [[101,  36,  63], [103,  85,  29], [109,  25,  70],[103, 102, 103]]
+    baselines = np.asanyarray(baselines)
+    
+    for i, d_h in enumerate(dominant_hsvs):
+        dists = []
+        for j, p in enumerate(baselines):
+            dist = ManhattanDistance(d_h, p)
+            dists.append(dist)
+        p_match_index = dists.index(min(dists))
+        print("p_match_index", p_match_index)
+        if p_match_index == 0:
+            new_hsv.insert(p_match_index, [300, 125, 125])
+        elif p_match_index == 1:
+            new_hsv.insert(p_match_index, [200, 125, 125])
+        elif p_match_index == 2:
+            new_hsv.insert(p_match_index, [100, 125, 125])
+        elif p_match_index == 3:
+            new_hsv.insert(p_match_index, [0, 125, 125])
+        
+
+    # for i, d_h in enumerate(dominant_hsvs):
+    #     if d_h[0] == max_h:
+    #         new_hsv.append([300, d_h[1], 125])
+    #         print("d_h[1]: ", d_h[1])
+    #         continue
+    #     if d_h[0] == min_h:
+    #         new_hsv.append([0, d_h[1], 125])
+    #         print("d_h[1]: ", d_h[1])
+    #         continue
+
+    #     if temp_i == -1:
+    #         temp_h = d_h[0]
+    #         temp_i = i
+    #         new_hsv.append([d_h[0], d_h[1], 125])
+    #     else:
+    #         if d_h[0] > temp_h:
+    #             new_hsv.append([200, d_h[1], 125])
+    #             new_hsv[temp_i][0] = 100
+    #         else:
+    #             new_hsv.append([100, d_h[1], 125])
+    #             new_hsv[temp_i][0] = 200
 
     print(new_hsv)
 

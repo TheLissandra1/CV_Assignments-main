@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-
+from scipy.stats import wasserstein_distance
 from skimage import measure
 
 block_size = 1.0
@@ -48,17 +48,13 @@ def get_index(data, img_path, color_path, rvec, tvec, intrinsic, dist):
 
     return points, indx, colors
 
-
 def get_color(color_img, data, rvec, tvec, intrinsic, dist):
     # convert from BGR to rgb
     rgb = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
 
-    # data = [i for i in data if -1400 < i[2] < -1000]
+    data = [i for i in data if -1300 < i[2] < -1100]
     colors = []
-    if len(data) < 1:
-        print("d empty")
     projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec, tvec, intrinsic, dist)
-
     for i, p in enumerate(projectedPoints):
         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
             colors.append(rgb[np.int32(p[0][1]), np.int32(p[0][0])])
@@ -79,59 +75,110 @@ def get_color(color_img, data, rvec, tvec, intrinsic, dist):
     # plt.show()
     print("Dominant Color: ", dominant_Hue)
 
-    # s,v channel compute average
-    s_avg = np.rint(np.average(s.ravel())).astype(int)
-    s_new = np.full((s.shape), s_avg)
-    v_avg = np.rint(np.average(v.ravel())).astype(int)
-    v_new = np.full((s.shape), v_avg)
+    # s and v also use the peak values
+    s_hist,_ = np.histogram(s.ravel(),255,[0,255]) 
+    s_peak = np.argmax(s_hist)
+    s_new = np.full((s.shape), s_peak)
     hsv[:, :, 1] = s_new
+
+    v_hist,_ = np.histogram(v.ravel(),255,[0,255])  
+    v_peak = np.argmax(v_hist)
+    v_new = np.full((v.shape), v_peak)
     hsv[:, :, 2] = v_new
 
-    dominant_color = np.uint8([[[dominant_Hue, s_avg, v_avg]]])
+    # # s,v channel compute average
+    # s_avg = np.rint(np.average(s.ravel())).astype(int)
+    # s_new = np.full((s.shape), s_avg)
+    # v_avg = np.rint(np.average(v.ravel())).astype(int)
+    # v_new = np.full((s.shape), v_avg)
+    # hsv[:, :, 1] = s_new
+    # hsv[:, :, 2] = v_new
+
+    dominant_color = np.uint8([[[dominant_Hue, s_peak, v_peak]]])
+    # dominant_color = np.uint8([[[dominant_Hue, s_avg, v_avg]]])
     # convert to rgb values
     dominant_color_rgb = cv2.cvtColor(dominant_color, cv2.COLOR_HSV2RGB)
     # print(dominant_color_rgb)
+    print(dominant_color[0][0])
 
     return dominant_color[0][0], dominant_color_rgb[0][0]
 
+# compute manhattan distance between two 3d vectors
+def ManhattanDistance(color1, color2):
+    ManhattanDistance = sum(abs(val1-val2) for val1, val2 in zip(color1, color2))
+    return ManhattanDistance
 
+def EMD(color1, color2):
+    EMDist = wasserstein_distance(color1, color2)
+    return EMDist
+def EuclideanDistance(pointA, pointB):
+    dist = np.linalg.norm(np.asarray(pointA) - np.asarray(pointB))
+    return dist
 def get_person_color(color_img, persons, color_list, rvec, tvec, intrinsic, dist):
     color = cv2.imread(color_img, cv2.IMREAD_COLOR)
     color = cv2.resize(color, [1000, 1000])
     dominant_hsvs = []
     for person in persons:
-        p = list(person.values())
-        print(len(p))
         dominant_hsv, _ = get_color(color, list(person.values()), rvec, tvec, intrinsic, dist)
         dominant_hsvs.append(dominant_hsv)
 
     dominant_hsvs = np.asarray(dominant_hsvs)
-    max_h = np.max(dominant_hsvs, axis=0)[0]
-    min_h = np.min(dominant_hsvs, axis=0)[0]
-    temp_h = min_h
-    temp_i = -1
+    # # rank persons' distance between baseline and new frame
+    
+    
+    # max_h = np.max(dominant_hsvs, axis=0)[0]
+    # min_h = np.min(dominant_hsvs, axis=0)[0]
+    # temp_h = min_h
+    # temp_i = -1
     new_hsv = []
+
+    baselines = [[100, 46, 68], [103,  117,  29], [120, 25, 89],[104, 100, 132]]
+    baselines = np.asanyarray(baselines)
+    
     for i, d_h in enumerate(dominant_hsvs):
-        if d_h[0] == max_h:
-            new_hsv.append([300, d_h[1], 125])
-            continue
-        if d_h[0] == min_h:
-            new_hsv.append([0, d_h[1], 125])
-            continue
+        dists = []
+        for j, p in enumerate(baselines):
+            # dist = ManhattanDistance(d_h, p)
+            # dist = EMD(d_h, p)
+            dist = EuclideanDistance(d_h, p)
+            dists.append(dist)
+        print("dists: ", dists)
+        print("min dists: ", min(dists))
+        p_match_index = dists.index(min(dists))
+        print("p_match_index", p_match_index)
+        if p_match_index == 0:
+            new_hsv.insert(p_match_index, [300, 125, 125])
+        elif p_match_index == 1:
+            new_hsv.insert(p_match_index, [200, 125, 125])
+        elif p_match_index == 2:
+            new_hsv.insert(p_match_index, [100, 125, 125])
+        elif p_match_index == 3:
+            new_hsv.insert(p_match_index, [0, 125, 125])
+        
 
-        if temp_i == -1:
-            temp_h = d_h[0]
-            temp_i = i
-            new_hsv.append([d_h[0], d_h[1], 125])
-        else:
-            if d_h[0] > temp_h:
-                new_hsv.append([200, d_h[1], 125])
-                new_hsv[temp_i][0] = 100
-            else:
-                new_hsv.append([100, d_h[1], 125])
-                new_hsv[temp_i][0] = 200
+    # for i, d_h in enumerate(dominant_hsvs):
+    #     if d_h[0] == max_h:
+    #         new_hsv.append([300, d_h[1], 125])
+    #         print("d_h[1]: ", d_h[1])
+    #         continue
+    #     if d_h[0] == min_h:
+    #         new_hsv.append([0, d_h[1], 125])
+    #         print("d_h[1]: ", d_h[1])
+    #         continue
 
-    # print(new_hsv)
+    #     if temp_i == -1:
+    #         temp_h = d_h[0]
+    #         temp_i = i
+    #         new_hsv.append([d_h[0], d_h[1], 125])
+    #     else:
+    #         if d_h[0] > temp_h:
+    #             new_hsv.append([200, d_h[1], 125])
+    #             new_hsv[temp_i][0] = 100
+    #         else:
+    #             new_hsv.append([100, d_h[1], 125])
+    #             new_hsv[temp_i][0] = 200
+
+    print(new_hsv)
 
     c = []
     for h in new_hsv:
@@ -140,6 +187,97 @@ def get_person_color(color_img, persons, color_list, rvec, tvec, intrinsic, dist
     for i, person in enumerate(persons):
         for k in person.keys():
             color_list[k] = c[i]
+# def get_color(color_img, data, rvec, tvec, intrinsic, dist):
+#     # convert from BGR to rgb
+#     rgb = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
+
+#     # data = [i for i in data if -1400 < i[2] < -1000]
+#     colors = []
+#     if len(data) < 1:
+#         print("d empty")
+#     projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec, tvec, intrinsic, dist)
+
+#     for i, p in enumerate(projectedPoints):
+#         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
+#             colors.append(rgb[np.int32(p[0][1]), np.int32(p[0][0])])
+
+#     colors = np.asarray(colors).reshape([1, len(colors), 3])
+#     # convert from BGR to HSV
+#     hsv = cv2.cvtColor(colors, cv2.COLOR_RGB2HSV)
+
+#     h = hsv[:, :, 0]
+#     s = hsv[:, :, 1]
+#     v = hsv[:, :, 2]
+
+#     # histogram of h
+#     hist, bins = np.histogram(h.ravel(), 360, [0, 360])
+
+#     dominant_Hue = np.argmax(hist)
+#     # plt.plot(hist)
+#     # plt.show()
+#     print("Dominant Color: ", dominant_Hue)
+
+#     # s,v channel compute average
+#     s_avg = np.rint(np.average(s.ravel())).astype(int)
+#     s_new = np.full((s.shape), s_avg)
+#     v_avg = np.rint(np.average(v.ravel())).astype(int)
+#     v_new = np.full((s.shape), v_avg)
+#     hsv[:, :, 1] = s_new
+#     hsv[:, :, 2] = v_new
+
+#     dominant_color = np.uint8([[[dominant_Hue, s_avg, v_avg]]])
+#     # convert to rgb values
+#     dominant_color_rgb = cv2.cvtColor(dominant_color, cv2.COLOR_HSV2RGB)
+#     # print(dominant_color_rgb)
+
+#     return dominant_color[0][0], dominant_color_rgb[0][0]
+
+
+# def get_person_color(color_img, persons, color_list, rvec, tvec, intrinsic, dist):
+#     color = cv2.imread(color_img, cv2.IMREAD_COLOR)
+#     color = cv2.resize(color, [1000, 1000])
+#     dominant_hsvs = []
+#     for person in persons:
+#         p = list(person.values())
+#         print(len(p))
+#         dominant_hsv, _ = get_color(color, list(person.values()), rvec, tvec, intrinsic, dist)
+#         dominant_hsvs.append(dominant_hsv)
+
+#     dominant_hsvs = np.asarray(dominant_hsvs)
+#     max_h = np.max(dominant_hsvs, axis=0)[0]
+#     min_h = np.min(dominant_hsvs, axis=0)[0]
+#     temp_h = min_h
+#     temp_i = -1
+#     new_hsv = []
+#     for i, d_h in enumerate(dominant_hsvs):
+#         if d_h[0] == max_h:
+#             new_hsv.append([300, d_h[1], 125])
+#             continue
+#         if d_h[0] == min_h:
+#             new_hsv.append([0, d_h[1], 125])
+#             continue
+
+#         if temp_i == -1:
+#             temp_h = d_h[0]
+#             temp_i = i
+#             new_hsv.append([d_h[0], d_h[1], 125])
+#         else:
+#             if d_h[0] > temp_h:
+#                 new_hsv.append([200, d_h[1], 125])
+#                 new_hsv[temp_i][0] = 100
+#             else:
+#                 new_hsv.append([100, d_h[1], 125])
+#                 new_hsv[temp_i][0] = 200
+
+#     # print(new_hsv)
+
+#     c = []
+#     for h in new_hsv:
+#         c.append(cv2.cvtColor(np.float32([[h]]), cv2.COLOR_HSV2RGB))
+
+#     for i, person in enumerate(persons):
+#         for k in person.keys():
+#             color_list[k] = c[i]
 
 
 def init_voxel():
