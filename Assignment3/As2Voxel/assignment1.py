@@ -46,16 +46,21 @@ def get_index(data, img_path, color_path, rvec, tvec, intrinsic, dist):
         # else:
         #     colors.append([0, 0, 0])
 
-    return points, indx, colors
+    return img, points, indx, colors
 
-def get_color(color_img, data, rvec, tvec, intrinsic, dist):
+
+def project_person(data, rvec, tvec, intrinsic, dist):
+    data = [i for i in data if -1300 < i[2] < -1100]
+    projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec, tvec, intrinsic, dist)
+    return projectedPoints
+
+
+def get_color(color_img, projected_points):
     # convert from BGR to rgb
     rgb = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
 
-    data = [i for i in data if -1300 < i[2] < -1100]
     colors = []
-    projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec, tvec, intrinsic, dist)
-    for i, p in enumerate(projectedPoints):
+    for i, p in enumerate(projected_points):
         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
             colors.append(rgb[np.int32(p[0][1]), np.int32(p[0][0])])
 
@@ -69,116 +74,79 @@ def get_color(color_img, data, rvec, tvec, intrinsic, dist):
 
     # histogram of h
     hist, bins = np.histogram(h.ravel(), 360, [0, 360])
-
-    dominant_Hue = np.argmax(hist)
-    # plt.plot(hist)
-    # plt.show()
-    print("Dominant Color: ", dominant_Hue)
+    h_peak = np.argmax(hist)
 
     # s and v also use the peak values
-    s_hist,_ = np.histogram(s.ravel(),255,[0,255]) 
+    s_hist, _ = np.histogram(s.ravel(), 255, [0, 255])
     s_peak = np.argmax(s_hist)
-    s_new = np.full((s.shape), s_peak)
-    hsv[:, :, 1] = s_new
 
-    v_hist,_ = np.histogram(v.ravel(),255,[0,255])  
+    v_hist, _ = np.histogram(v.ravel(), 255, [0, 255])
     v_peak = np.argmax(v_hist)
-    v_new = np.full((v.shape), v_peak)
-    hsv[:, :, 2] = v_new
 
-    # # s,v channel compute average
-    # s_avg = np.rint(np.average(s.ravel())).astype(int)
-    # s_new = np.full((s.shape), s_avg)
-    # v_avg = np.rint(np.average(v.ravel())).astype(int)
-    # v_new = np.full((s.shape), v_avg)
-    # hsv[:, :, 1] = s_new
-    # hsv[:, :, 2] = v_new
+    dominant_color = [h_peak, s_peak, v_peak]
 
-    dominant_color = np.uint8([[[dominant_Hue, s_peak, v_peak]]])
-    # dominant_color = np.uint8([[[dominant_Hue, s_avg, v_avg]]])
-    # convert to rgb values
-    dominant_color_rgb = cv2.cvtColor(dominant_color, cv2.COLOR_HSV2RGB)
-    # print(dominant_color_rgb)
-    print(dominant_color[0][0])
+    return dominant_color
 
-    return dominant_color[0][0], dominant_color_rgb[0][0]
 
 # compute manhattan distance between two 3d vectors
 def ManhattanDistance(color1, color2):
-    ManhattanDistance = sum(abs(val1-val2) for val1, val2 in zip(color1, color2))
+    ManhattanDistance = sum(abs(val1 - val2) for val1, val2 in zip(color1, color2))
     return ManhattanDistance
+
 
 def EMD(color1, color2):
     EMDist = wasserstein_distance(color1, color2)
     return EMDist
-def EuclideanDistance(pointA, pointB):
-    dist = np.linalg.norm(np.asarray(pointA) - np.asarray(pointB))
+
+
+def euclidean(point1, point2):
+    dist = np.linalg.norm(np.asarray(point1) - np.asarray(point2))
     return dist
-def get_person_color(color_img, persons, color_list, rvec, tvec, intrinsic, dist):
-    color = cv2.imread(color_img, cv2.IMREAD_COLOR)
-    color = cv2.resize(color, [1000, 1000])
+
+
+def get_person_color(color_img, persons, color_list, pixels, best_cam):
+    images = []
+    for img in color_img:
+        color = cv2.imread(img, cv2.IMREAD_COLOR)
+        color = cv2.resize(color, [1000, 1000])
+        images.append(color)
+
     dominant_hsvs = []
-    for person in persons:
-        dominant_hsv, _ = get_color(color, list(person.values()), rvec, tvec, intrinsic, dist)
-        dominant_hsvs.append(dominant_hsv)
+    for i in range(4):
+        person_hsv = []
+        for j in range(2):
+            hsv = get_color(images[j], pixels[j][i])
+            person_hsv.append(hsv)
+        mean_hsv = np.mean(person_hsv, axis=0)
+        dominant_hsvs.append(mean_hsv)
 
     dominant_hsvs = np.asarray(dominant_hsvs)
-    # # rank persons' distance between baseline and new frame
-    
-    
-    # max_h = np.max(dominant_hsvs, axis=0)[0]
-    # min_h = np.min(dominant_hsvs, axis=0)[0]
-    # temp_h = min_h
-    # temp_i = -1
+    max_h = np.max(dominant_hsvs, axis=0)[2]
+    min_h = np.min(dominant_hsvs, axis=0)[2]
+    temp_h = min_h
+    temp_i = -1
     new_hsv = []
-
-    baselines = [[100, 46, 68], [103,  117,  29], [120, 25, 89],[104, 100, 132]]
-    baselines = np.asanyarray(baselines)
-    
     for i, d_h in enumerate(dominant_hsvs):
-        dists = []
-        for j, p in enumerate(baselines):
-            # dist = ManhattanDistance(d_h, p)
-            # dist = EMD(d_h, p)
-            dist = EuclideanDistance(d_h, p)
-            dists.append(dist)
-        print("dists: ", dists)
-        print("min dists: ", min(dists))
-        p_match_index = dists.index(min(dists))
-        print("p_match_index", p_match_index)
-        if p_match_index == 0:
-            new_hsv.insert(p_match_index, [300, 125, 125])
-        elif p_match_index == 1:
-            new_hsv.insert(p_match_index, [200, 125, 125])
-        elif p_match_index == 2:
-            new_hsv.insert(p_match_index, [100, 125, 125])
-        elif p_match_index == 3:
-            new_hsv.insert(p_match_index, [0, 125, 125])
-        
+        if d_h[2] == max_h:
+            new_hsv.append([300, d_h[1], 125])
+            continue
+        if d_h[2] == min_h:
+            new_hsv.append([0, d_h[1], 125])
+            continue
 
-    # for i, d_h in enumerate(dominant_hsvs):
-    #     if d_h[0] == max_h:
-    #         new_hsv.append([300, d_h[1], 125])
-    #         print("d_h[1]: ", d_h[1])
-    #         continue
-    #     if d_h[0] == min_h:
-    #         new_hsv.append([0, d_h[1], 125])
-    #         print("d_h[1]: ", d_h[1])
-    #         continue
+        if temp_i == -1:
+            temp_h = d_h[0]
+            temp_i = i
+            new_hsv.append([d_h[0], d_h[1], 125])
+        else:
+            if d_h[0] > temp_h:
+                new_hsv.append([200, d_h[1], 125])
+                new_hsv[temp_i][0] = 100
+            else:
+                new_hsv.append([100, d_h[1], 125])
+                new_hsv[temp_i][0] = 200
 
-    #     if temp_i == -1:
-    #         temp_h = d_h[0]
-    #         temp_i = i
-    #         new_hsv.append([d_h[0], d_h[1], 125])
-    #     else:
-    #         if d_h[0] > temp_h:
-    #             new_hsv.append([200, d_h[1], 125])
-    #             new_hsv[temp_i][0] = 100
-    #         else:
-    #             new_hsv.append([100, d_h[1], 125])
-    #             new_hsv[temp_i][0] = 200
-
-    print(new_hsv)
+    print(dominant_hsvs)
 
     c = []
     for h in new_hsv:
@@ -187,136 +155,37 @@ def get_person_color(color_img, persons, color_list, rvec, tvec, intrinsic, dist
     for i, person in enumerate(persons):
         for k in person.keys():
             color_list[k] = c[i]
-# def get_color(color_img, data, rvec, tvec, intrinsic, dist):
-#     # convert from BGR to rgb
-#     rgb = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
 
-#     # data = [i for i in data if -1400 < i[2] < -1000]
-#     colors = []
-#     if len(data) < 1:
-#         print("d empty")
-#     projectedPoints, jac = cv2.projectPoints(np.asarray(data), rvec, tvec, intrinsic, dist)
-
-#     for i, p in enumerate(projectedPoints):
-#         if 0 <= p[0][0] < 1000 and 0 <= p[0][1] < 1000:
-#             colors.append(rgb[np.int32(p[0][1]), np.int32(p[0][0])])
-
-#     colors = np.asarray(colors).reshape([1, len(colors), 3])
-#     # convert from BGR to HSV
-#     hsv = cv2.cvtColor(colors, cv2.COLOR_RGB2HSV)
-
-#     h = hsv[:, :, 0]
-#     s = hsv[:, :, 1]
-#     v = hsv[:, :, 2]
-
-#     # histogram of h
-#     hist, bins = np.histogram(h.ravel(), 360, [0, 360])
-
-#     dominant_Hue = np.argmax(hist)
-#     # plt.plot(hist)
-#     # plt.show()
-#     print("Dominant Color: ", dominant_Hue)
-
-#     # s,v channel compute average
-#     s_avg = np.rint(np.average(s.ravel())).astype(int)
-#     s_new = np.full((s.shape), s_avg)
-#     v_avg = np.rint(np.average(v.ravel())).astype(int)
-#     v_new = np.full((s.shape), v_avg)
-#     hsv[:, :, 1] = s_new
-#     hsv[:, :, 2] = v_new
-
-#     dominant_color = np.uint8([[[dominant_Hue, s_avg, v_avg]]])
-#     # convert to rgb values
-#     dominant_color_rgb = cv2.cvtColor(dominant_color, cv2.COLOR_HSV2RGB)
-#     # print(dominant_color_rgb)
-
-#     return dominant_color[0][0], dominant_color_rgb[0][0]
-
-
-# def get_person_color(color_img, persons, color_list, rvec, tvec, intrinsic, dist):
-#     color = cv2.imread(color_img, cv2.IMREAD_COLOR)
-#     color = cv2.resize(color, [1000, 1000])
-#     dominant_hsvs = []
-#     for person in persons:
-#         p = list(person.values())
-#         print(len(p))
-#         dominant_hsv, _ = get_color(color, list(person.values()), rvec, tvec, intrinsic, dist)
-#         dominant_hsvs.append(dominant_hsv)
-
-#     dominant_hsvs = np.asarray(dominant_hsvs)
-#     max_h = np.max(dominant_hsvs, axis=0)[0]
-#     min_h = np.min(dominant_hsvs, axis=0)[0]
-#     temp_h = min_h
-#     temp_i = -1
-#     new_hsv = []
-#     for i, d_h in enumerate(dominant_hsvs):
-#         if d_h[0] == max_h:
-#             new_hsv.append([300, d_h[1], 125])
-#             continue
-#         if d_h[0] == min_h:
-#             new_hsv.append([0, d_h[1], 125])
-#             continue
-
-#         if temp_i == -1:
-#             temp_h = d_h[0]
-#             temp_i = i
-#             new_hsv.append([d_h[0], d_h[1], 125])
-#         else:
-#             if d_h[0] > temp_h:
-#                 new_hsv.append([200, d_h[1], 125])
-#                 new_hsv[temp_i][0] = 100
-#             else:
-#                 new_hsv.append([100, d_h[1], 125])
-#                 new_hsv[temp_i][0] = 200
-
-#     # print(new_hsv)
-
-#     c = []
-#     for h in new_hsv:
-#         c.append(cv2.cvtColor(np.float32([[h]]), cv2.COLOR_HSV2RGB))
-
-#     for i, person in enumerate(persons):
-#         for k in person.keys():
-#             color_list[k] = c[i]
+    return c, color_list
 
 
 def init_voxel():
-    data, data_zy = [], []
-    width = 50
-    height = 25
-    depth = 50
+    data_zy = []
+    width = 46
+    height = 20
+    depth = 56
     scale = 100
     for x in range(width * 2):
         for y in range(height * 2):
             for z in range(depth * 2):
-                data.append(
-                    [scale * (0.5 * x * block_size - width / 2), scale * (0.5 * y * block_size),
-                     scale * (0.5 * z * block_size - depth / 2)])
-
                 data_zy.append(
-                    [scale * (0.5 * x * block_size - width / 2), scale * (0.5 * z * block_size - depth / 2),
+                    [scale * (0.5 * x * block_size - width / 2 + 7), scale * (0.5 * z * block_size - depth / 2 - 5),
                      -scale * (0.5 * y * block_size)])
 
     return data_zy
 
 
 def build_voxel_model(foregrounds, cam_views, data, rvecs, tvecs, intrinsics, dists):
-#     index, colors = [], []
     data_ii = data
     color = None
+    img_fg = []
     for i in range(4):
-        points, indx, color = get_index(data_ii, foregrounds[i], cam_views[i], rvecs[i], tvecs[i], intrinsics[i], dists[i])
+        fg, _, indx, color = get_index(data_ii, foregrounds[i], cam_views[i],
+                                       rvecs[i], tvecs[i], intrinsics[i], dists[i])
         ii = indx
         data_ii = [data_ii[ind] for ind in ii]
-#         colors.append(color)
-
-#         if i == 0:
-#             index = indx
-#         else:
-#             index = np.intersect1d(index, indx)
-
-#     original_color = np.mean(colors, axis=0)
-    return data_ii, color
+        img_fg.append(fg)
+    return data_ii, color, img_fg
 
 
 def set_voxel(fg_path, cam_views, init=None):
@@ -334,7 +203,7 @@ def set_voxel(fg_path, cam_views, init=None):
     else:
         data_zy = init
 
-    result_zy, colors = build_voxel_model(fg_path, cam_views, data_zy, rvecs, tvecs, intrinsics, dists)
+    result_zy, colors, img_fg = build_voxel_model(fg_path, cam_views, data_zy, rvecs, tvecs, intrinsics, dists)
 
     result = [[data[0], -data[2], data[1]] for data in result_zy]
     color_p = colors
@@ -348,64 +217,122 @@ def set_voxel(fg_path, cam_views, init=None):
     c = np.float32(c)
 
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
-    ghost = True
-    while ghost:
+    outlier_thresh = 4
+    center = None
+    for d in range(3):
         # K-Means cluster
         ret, label, center = cv2.kmeans(c, 4, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
-        print("r: ", len(result))
-        print("zy: ", len(result_zy))
-        print("ll: ", label.shape)
 
         p0, p1, p2, p3 = {}, {}, {}, {}
+        outliers = []
         counts = [0, 0, 0, 0]
-        for i in range(label.shape[0]):
-            if label[i] == 0:
-                p0[i] = result_zy[i]
-                counts[0] += 1
-            elif label[i] == 1:
-                p1[i] = result_zy[i]
-                counts[1] += 1
-            elif label[i] == 2:
-                p2[i] = result_zy[i]
-                counts[2] += 1
-            elif label[i] == 3:
-                p3[i] = result_zy[i]
-                counts[3] += 1
+        if d != 1:
+            for i in range(label.shape[0]):
+                if label[i] == 0:
+                    p0[i] = result_zy[i]
+                    counts[0] += 1
 
-        people = [p0, p1, p2, p3]
-        ghost = False
-        wrong = []
-        # check wrong cluster because of ghost voxels
-        for i, count in enumerate(counts):
-            if count < 800:
-                wrong.append(i)
+                elif label[i] == 1:
+                    p1[i] = result_zy[i]
+                    counts[1] += 1
 
-        print("ww: ", wrong)
-        if len(wrong) > 0:
-            ghost = True
-            for w in wrong:
-                keys = list(people[w].keys())
-                keys.reverse()
-                for key in keys:
-                    result.pop(key)
-                    result_zy.pop(key)
-                    color_p.pop(key)
+                elif label[i] == 2:
+                    p2[i] = result_zy[i]
+                    counts[2] += 1
+
+                elif label[i] == 3:
+                    p3[i] = result_zy[i]
+                    counts[3] += 1
+
+            people = [p0, p1, p2, p3]
+
+        elif d == 1:
+            for i in range(label.shape[0]):
+                for j in range(4):
+                    if label[i] == j:
+                        if euclidean(c[i], center[j]) > outlier_thresh:
+                            outliers.append(i)
+
+            if len(outliers) > 0:
+                outliers.reverse()
+                for o in outliers:
+                    result.pop(o)
+                    result_zy.pop(o)
+                    color_p.pop(o)
                     c = [[d[0], d[2]] for d in result]
                     c = np.asarray(c)
                     c = np.float32(c)
 
+        if d == 0:
+            wrong = []
+            # check wrong cluster because of ghost voxels
+            for i, count in enumerate(counts):
+                if count < 800:
+                    wrong.append(i)
+                else:
+                    person = list(people[i].values())
+                    p = [i for i in person if -1300 < i[2] < -1200]
+                    if len(p) == 0:
+                        wrong.append(i)
+                        continue
+                    p = [i for i in person if i[2] < -1400]
+                    if len(p) == 0:
+                        wrong.append(i)
+                        continue
 
+            print("ww", wrong)
+            if len(wrong) > 0:
+                for w in wrong:
+                    keys = list(people[w].keys())
+                    keys.reverse()
+                    for key in keys:
+                        result.pop(key)
+                        result_zy.pop(key)
+                        color_p.pop(key)
+                        c = [[d[0], d[2]] for d in result]
+                        c = np.asarray(c)
+                        c = np.float32(c)
 
+    # find the best three cam views
+    counts_gap = []
+    all_cam_pixel = []  # projected points of each person in each view
+    for i in range(4):
+        pixel_counts = 0
+        cam_pixel = []
+        for person in people:
+            # projected points of one person in one view
+            pixel = project_person(list(person.values()), rvecs[i], tvecs[i], intrinsics[i], dists[i])
+            pixel_counts += pixel.shape[0]
+            cam_pixel.append(pixel)
+        total_pixels = project_person(result_zy, rvecs[i], tvecs[i], intrinsics[i], dists[i])
+        gap = pixel_counts - total_pixels.shape[0]
+        counts_gap.append(gap)
+        all_cam_pixel.append(cam_pixel)
 
+    min_index = np.argmin(counts_gap)  # discard the worst cam view
+    all_cam_pixel.pop(min_index)
+    cam_views.pop(min_index)
+    test_pixels = all_cam_pixel
+    test_views = cam_views
+    # test_index1 = np.argmax(counts_gap)
+    # counts_gap[test_index1] = -1
+    # test_index2 = np.argmax(counts_gap)
+    # print("has cam", test_index1, test_index2)
 
-    test_cam = 1  # cam2 view
-    get_person_color(cam_views[test_cam], people, color_p,
-                     rvecs[test_cam], tvecs[test_cam], intrinsics[test_cam], dists[test_cam])
+    # test_pixels = [all_cam_pixel[test_index1], all_cam_pixel[test_index2]]
+    # test_views = [cam_views[test_index1], cam_views[test_index2]]
+
+    track_color, color_p = get_person_color(test_views, people, color_p, test_pixels, 0)
 
     for i, cc in enumerate(color_p):
         temp = [c / 255 for c in cc]
         color_p[i] = temp
-    return result, color_p
+
+    for i, cc in enumerate(track_color):
+        temp = [c / 255 for c in cc]
+        track_color[i] = temp
+
+    return result, color_p, center, track_color
 
 
 def get_cam_positions():
@@ -438,11 +365,6 @@ def get_cam_positions():
     #                       [-21.764788   17.307413   23.527065 ]]
 
     return cams_3d, [[1.0, 0, 0], [0, 1.0, 0], [0, 0, 1.0], [1.0, 1.0, 0]]
-
-    # return [[-64 * block_size, 64 * block_size, 63 * block_size],
-    #         [63 * block_size, 64 * block_size, 63 * block_size],
-    #         [63 * block_size, 64 * block_size, -64 * block_size],
-    #         [-64 * block_size, 64 * block_size, -64 * block_size]]
 
 
 # read Config.xml matrix into variables
@@ -477,11 +399,6 @@ def get_cam_rotation_matrices():
     rotation_mtx_cam2 = glm.mat4x4(expandTo4x4(rmtx_cam2))
     rotation_mtx_cam3 = glm.mat4x4(expandTo4x4(rmtx_cam3))
     rotation_mtx_cam4 = glm.mat4x4(expandTo4x4(rmtx_cam4))
-    # print("rotation matrix")
-    # print(rotation_mtx_cam1)
-    # print(rotation_mtx_cam2)
-    # print(rotation_mtx_cam3)
-    # print(rotation_mtx_cam4)
 
     rotation_mtx_cam1 = glm.rotate(rotation_mtx_cam1, np.pi / 2, [0, 0, 1])
     rotation_mtx_cam2 = glm.rotate(rotation_mtx_cam2, np.pi / 2, [0, 0, 1])
@@ -489,12 +406,6 @@ def get_cam_rotation_matrices():
     rotation_mtx_cam4 = glm.rotate(rotation_mtx_cam4, np.pi / 2, [0, 0, 1])
 
     cam_rotations = [rotation_mtx_cam1, rotation_mtx_cam2, rotation_mtx_cam3, rotation_mtx_cam4]
-    # cam_tvecs = [tvec_cam1, tvec_cam2, tvec_cam3, tvec_cam4]
-    # print("translation vector: ", tvec_cam1)
-    # print(tvec_cam2)
-    # print(tvec_cam3)
-    # print(tvec_cam4)
-    # print(tvec_cam4)
 
     # # glm.rotate(angle: Number, axis: vector3), -> dmat4x4
     return cam_rotations

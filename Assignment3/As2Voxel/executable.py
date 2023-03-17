@@ -11,9 +11,10 @@ from assignment1 import set_voxel, init_voxel
 from engine.camera import Camera
 from engine.config import config
 
-data, data_zy = [], []
+data_zy, centers, center_colors = [], [], []
 initial = 1
-cube, hdrbuffer, blurbuffer, lastPosX, lastPosY = None, None, None, None, None
+auto_draw = False
+cube, track, hdrbuffer, blurbuffer, lastPosX, lastPosY = None, None, None, None, None, None
 firstTime = True
 window_width, window_height = config['window_width'], config['window_height']
 camera = Camera(glm.vec3(0, 100, 0), pitch=-90, yaw=0, speed=40)
@@ -47,7 +48,7 @@ def draw_objs(obj, program, perspective, light_pos, texture, normal, specular, d
 
 
 def main():
-    global hdrbuffer, blurbuffer, cube, window_width, window_height
+    global hdrbuffer, blurbuffer, cube, track, window_width, window_height, initial, auto_draw, centers, center_colors
 
     if not glfw.init():
         print('Failed to initialize GLFW.')
@@ -113,6 +114,7 @@ def main():
     cam_shapes = [Model('resources/models/camera.json', cam_rot_matrices[c]) for c in range(4)]
     square = Model('resources/models/square.json')
     cube = Model('resources/models/cube.json')
+    track = Model('resources/models/track.json')
     texture = load_texture_2d('resources/textures/diffuse.jpg')
     texture_grid = load_texture_2d('resources/textures/diffuse_grid.jpg')
     normal = load_texture_2d('resources/textures/normal.jpg')
@@ -143,8 +145,27 @@ def main():
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glClearColor(0.1, 0.2, 0.8, 1)
 
+        if auto_draw:
+            fg_root = "../foreground/"
+            view_root = "../videoframe/"
+
+            print(initial, "start")
+
+            fg_path, cam_views = [], []
+            for j in range(4):
+                fg_path.append(
+                    fg_root + "cam" + str(j + 1) + "/" + str(initial * 10) + ".png")  # ../foreground/cam1/0.png
+                cam_views.append(view_root + "cam" + str(j + 1) + "/" + str(initial * 10) + ".png")
+            positions, colors, center = set_voxel(fg_path, cam_views, init=data_zy)
+            cube.set_multiple_positions(positions, colors)
+            centers.append([center[0], 0, center[1]])
+            center_colors.append([1, 1, 1])
+            print(initial, "done")
+            initial = initial + 1
+
         square.draw_multiple(depth_program)
         cube.draw_multiple(depth_program)
+        track.draw_multiple(depth_program)
         for cam in cam_shapes:
             cam.draw_multiple(depth_program)
 
@@ -156,6 +177,7 @@ def main():
 
         draw_objs(square, program, perspective, light_pos, texture_grid, normal_grid, specular_grid, depth_grid)
         draw_objs(cube, program, perspective, light_pos, texture, normal, specular, depth)
+        draw_objs(track, program, perspective, light_pos, texture, normal, specular, depth)
         for cam in cam_shapes:
             draw_objs(cam, program, perspective, light_pos, texture_grid, normal_grid, specular_grid, depth_grid)
 
@@ -183,7 +205,7 @@ def resize_callback(window, w, h):
 
 
 def key_callback(window, key, scancode, action, mods):
-    global cube, data, data_zy, initial
+    global cube, track, data_zy, initial, auto_draw, centers, center_colors
     if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
         glfw.set_window_should_close(window, glfw.TRUE)
     if key == glfw.KEY_G and action == glfw.PRESS:
@@ -191,7 +213,7 @@ def key_callback(window, key, scancode, action, mods):
         cube.set_multiple_positions(positions, colors)
     if key == glfw.KEY_I and action == glfw.PRESS:
         data_zy = init_voxel()
-        initial = 12
+        initial = 60
     if key == glfw.KEY_V and action == glfw.PRESS:
         fg_root = "../foreground/"
         view_root = "../videoframe/"
@@ -202,10 +224,21 @@ def key_callback(window, key, scancode, action, mods):
         for j in range(4):
             fg_path.append(fg_root + "cam" + str(j + 1) + "/" + str(initial * 10) + ".png")  # ../foreground/cam1/0.png
             cam_views.append(view_root + "cam" + str(j + 1) + "/" + str(initial * 10) + ".png")
-        positions, colors = set_voxel(fg_path, cam_views, init=data_zy)
+        positions, colors, center, center_color = set_voxel(fg_path, cam_views, init=data_zy)
+        for c in center:
+            c = [c[0], 0, c[1]]
+            centers.append(c)
+
+        center_colors.extend(center_color)
+        track.set_multiple_positions(centers, center_colors)
         cube.set_multiple_positions(positions, colors)
         print(initial, "done")
         initial = initial + 1
+
+    if key == glfw.KEY_P and action == glfw.PRESS:
+        auto_draw = True
+    if key == glfw.KEY_O and action == glfw.PRESS:
+        auto_draw = False
 
 
 def mouse_move(win, pos_x, pos_y):
