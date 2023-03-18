@@ -148,7 +148,7 @@ def main():
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glClearColor(0.1, 0.2, 0.8, 1)
 
-        if auto_draw:
+        if auto_draw and initial < 273:
             fg_root = "../foreground/"
             view_root = "../videoframe/"
 
