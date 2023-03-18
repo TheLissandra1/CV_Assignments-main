@@ -89,9 +89,9 @@ def get_color(color_img, projected_points):
 
 
 # compute manhattan distance between two 3d vectors
-def ManhattanDistance(color1, color2):
-    ManhattanDistance = sum(abs(val1 - val2) for val1, val2 in zip(color1, color2))
-    return ManhattanDistance
+def manhattan(point1, point2):
+    manhattan = sum(abs(val1 - val2) for val1, val2 in zip(point1, point2))
+    return manhattan
 
 
 def EMD(color1, color2):
@@ -114,10 +114,13 @@ def get_person_color(color_img, persons, color_list, pixels, best_cam):
     dominant_hsvs = []
     for i in range(4):
         person_hsv = []
-        for j in range(2):
+        for j in range(3):
             hsv = get_color(images[j], pixels[j][i])
             person_hsv.append(hsv)
-        mean_hsv = np.mean(person_hsv, axis=0)
+        # best cam view has weight 0.4, other two has 0.3
+        weights = [3. / 10, 3. / 10, 3. / 10]
+        weights[best_cam] = 2. / 5
+        mean_hsv = np.average(person_hsv, axis=0, weights=weights)
         dominant_hsvs.append(mean_hsv)
 
     dominant_hsvs = np.asarray(dominant_hsvs)
@@ -218,7 +221,7 @@ def set_voxel(fg_path, cam_views, init=None):
     c = np.float32(c)
 
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
-    outlier_thresh = 4
+    outlier_thresh = 6
     center = None
     for d in range(3):
         # K-Means cluster
@@ -251,7 +254,7 @@ def set_voxel(fg_path, cam_views, init=None):
             for i in range(label.shape[0]):
                 for j in range(4):
                     if label[i] == j:
-                        if euclidean(c[i], center[j]) > outlier_thresh:
+                        if manhattan(c[i], center[j]) > outlier_thresh:
                             outliers.append(i)
 
             if len(outliers) > 0:
@@ -310,11 +313,13 @@ def set_voxel(fg_path, cam_views, init=None):
         counts_gap.append(gap)
         all_cam_pixel.append(cam_pixel)
 
-    best_index = np.argmax(counts_gap)
-    best_cam = cam_views[best_index]
     worst_index = np.argmin(counts_gap)  # discard the worst cam view
     all_cam_pixel.pop(worst_index)
     cam_views.pop(worst_index)
+    counts_gap.pop(worst_index)
+
+    best_index = np.argmax(counts_gap)
+
     test_pixels = all_cam_pixel
     test_views = cam_views
     # test_index1 = np.argmax(counts_gap)
@@ -325,7 +330,7 @@ def set_voxel(fg_path, cam_views, init=None):
     # test_pixels = [all_cam_pixel[test_index1], all_cam_pixel[test_index2]]
     # test_views = [cam_views[test_index1], cam_views[test_index2]]
 
-    track_color, color_p = get_person_color(test_views, people, color_p, test_pixels, best_cam)
+    track_color, color_p = get_person_color(test_views, people, color_p, test_pixels, best_index)
 
     for i, cc in enumerate(color_p):
         temp = [c / 255 for c in cc]

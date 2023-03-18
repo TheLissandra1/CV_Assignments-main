@@ -148,7 +148,7 @@ def main():
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glClearColor(0.1, 0.2, 0.8, 1)
 
-        if auto_draw and initial < 273:
+        if auto_draw and initial < 271:
             fg_root = "../foreground/"
             view_root = "../videoframe/"
 
@@ -211,7 +211,7 @@ def main():
                 c.append('y')
             elif (center_colors[i] == base_color[3]).all():
                 c.append('g')
-        plt.scatter(y, x, c=c, s=80)
+        plt.scatter(x, y, c=c, s=40)
         plt.show()
     glfw.terminate()
 
@@ -237,7 +237,7 @@ def key_callback(window, key, scancode, action, mods):
         cube.set_multiple_positions(positions, colors)
     if key == glfw.KEY_I and action == glfw.PRESS:
         data_zy = init_voxel()
-        initial = 8
+        initial = 6
     if key == glfw.KEY_V and action == glfw.PRESS:
         fg_root = "../foreground/"
         view_root = "../videoframe/"
