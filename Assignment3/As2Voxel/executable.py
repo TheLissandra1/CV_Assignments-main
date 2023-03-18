@@ -1,5 +1,8 @@
 import glm
 import glfw
+import numpy as np
+from matplotlib import pyplot as plt
+
 from engine.base.program import get_linked_program
 from engine.renderable.model import Model
 from engine.buffer.texture import *
@@ -12,7 +15,7 @@ from engine.camera import Camera
 from engine.config import config
 
 data_zy, centers, center_colors = [], [], []
-initial = 1
+initial = 8
 auto_draw = False
 cube, track, hdrbuffer, blurbuffer, lastPosX, lastPosY = None, None, None, None, None, None
 firstTime = True
@@ -156,10 +159,14 @@ def main():
                 fg_path.append(
                     fg_root + "cam" + str(j + 1) + "/" + str(initial * 10) + ".png")  # ../foreground/cam1/0.png
                 cam_views.append(view_root + "cam" + str(j + 1) + "/" + str(initial * 10) + ".png")
-            positions, colors, center = set_voxel(fg_path, cam_views, init=data_zy)
+            positions, colors, center, center_color = set_voxel(fg_path, cam_views, init=data_zy)
+            for c in center:
+                c = [c[0], 0, c[1]]
+                centers.append(c)
+
+            center_colors.extend(center_color)
+            track.set_multiple_positions(centers, center_colors)
             cube.set_multiple_positions(positions, colors)
-            centers.append([center[0], 0, center[1]])
-            center_colors.append([1, 1, 1])
             print(initial, "done")
             initial = initial + 1
 
@@ -189,6 +196,23 @@ def main():
         glfw.poll_events()
         glfw.swap_buffers(window)
 
+    if auto_draw:
+        base_color = [[0.1, 0.1, 0.86], [0.86, 0.1, 0.1], [0.86, 0.86, 0.1], [0.1, 0.86, 0.36]]
+        base_color = np.asarray(base_color).astype(np.float32)
+        x, y, c = [], [], []
+        for i, track_point in enumerate(centers):
+            x.append(track_point[0])
+            y.append(track_point[2])
+            if (center_colors[i] == base_color[0]).all():
+                c.append('b')
+            elif (center_colors[i] == base_color[1]).all():
+                c.append('r')
+            elif (center_colors[i] == base_color[2]).all():
+                c.append('y')
+            elif (center_colors[i] == base_color[3]).all():
+                c.append('g')
+        plt.scatter(y, x, c=c, s=80)
+        plt.show()
     glfw.terminate()
 
 
@@ -213,7 +237,7 @@ def key_callback(window, key, scancode, action, mods):
         cube.set_multiple_positions(positions, colors)
     if key == glfw.KEY_I and action == glfw.PRESS:
         data_zy = init_voxel()
-        initial = 60
+        initial = 8
     if key == glfw.KEY_V and action == glfw.PRESS:
         fg_root = "../foreground/"
         view_root = "../videoframe/"
@@ -230,6 +254,7 @@ def key_callback(window, key, scancode, action, mods):
             centers.append(c)
 
         center_colors.extend(center_color)
+        print(center_colors)
         track.set_multiple_positions(centers, center_colors)
         cube.set_multiple_positions(positions, colors)
         print(initial, "done")

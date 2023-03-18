@@ -128,29 +128,30 @@ def get_person_color(color_img, persons, color_list, pixels, best_cam):
     new_hsv = []
     for i, d_h in enumerate(dominant_hsvs):
         if d_h[2] == max_h:
-            new_hsv.append([300, d_h[1], 125])
+            new_hsv.append([30, 225, 220])
             continue
         if d_h[2] == min_h:
-            new_hsv.append([0, d_h[1], 125])
+            new_hsv.append([0, 225, 220])
             continue
 
         if temp_i == -1:
             temp_h = d_h[0]
             temp_i = i
-            new_hsv.append([d_h[0], d_h[1], 125])
+            new_hsv.append([d_h[0], 225, 220])
         else:
             if d_h[0] > temp_h:
-                new_hsv.append([200, d_h[1], 125])
-                new_hsv[temp_i][0] = 100
+                new_hsv.append([120, 225, 220])
+                new_hsv[temp_i][0] = 70
             else:
-                new_hsv.append([100, d_h[1], 125])
-                new_hsv[temp_i][0] = 200
+                new_hsv.append([70, 225, 220])
+                new_hsv[temp_i][0] = 120
 
     print(dominant_hsvs)
 
     c = []
-    for h in new_hsv:
-        c.append(cv2.cvtColor(np.float32([[h]]), cv2.COLOR_HSV2RGB))
+    for hsv in new_hsv:
+        c.append(cv2.cvtColor(np.uint8([[hsv]]), cv2.COLOR_HSV2RGB))
+    c = np.asarray(c).reshape(4, 3)
 
     for i, person in enumerate(persons):
         for k in person.keys():
@@ -309,9 +310,11 @@ def set_voxel(fg_path, cam_views, init=None):
         counts_gap.append(gap)
         all_cam_pixel.append(cam_pixel)
 
-    min_index = np.argmin(counts_gap)  # discard the worst cam view
-    all_cam_pixel.pop(min_index)
-    cam_views.pop(min_index)
+    best_index = np.argmax(counts_gap)
+    best_cam = cam_views[best_index]
+    worst_index = np.argmin(counts_gap)  # discard the worst cam view
+    all_cam_pixel.pop(worst_index)
+    cam_views.pop(worst_index)
     test_pixels = all_cam_pixel
     test_views = cam_views
     # test_index1 = np.argmax(counts_gap)
@@ -322,14 +325,15 @@ def set_voxel(fg_path, cam_views, init=None):
     # test_pixels = [all_cam_pixel[test_index1], all_cam_pixel[test_index2]]
     # test_views = [cam_views[test_index1], cam_views[test_index2]]
 
-    track_color, color_p = get_person_color(test_views, people, color_p, test_pixels, 0)
+    track_color, color_p = get_person_color(test_views, people, color_p, test_pixels, best_cam)
 
     for i, cc in enumerate(color_p):
         temp = [c / 255 for c in cc]
         color_p[i] = temp
 
+    track_color = np.float32(track_color)
     for i, cc in enumerate(track_color):
-        temp = [c / 255 for c in cc]
+        temp = [round(c / 255., 2) for c in cc]
         track_color[i] = temp
 
     return result, color_p, center, track_color
